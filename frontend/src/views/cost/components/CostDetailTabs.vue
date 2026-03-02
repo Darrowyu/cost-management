@@ -35,7 +35,7 @@
                 </template>
               </el-table-column>
               <el-table-column label="基本用量" width="100">
-                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.materials) || readOnly" /></template>
+                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :max="99999999" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.materials) || readOnly" /></template>
               </el-table-column>
               <el-table-column label="单价(CNY)" width="100"><template #default="{ row }">{{ formatNumber(row.unit_price) || '-' }}</template></el-table-column>
               <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) || '-' }}</template></el-table-column>
@@ -73,10 +73,10 @@
                 </template>
               </el-table-column>
               <el-table-column label="基本用量" width="100">
-                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.processes) || readOnly" /></template>
+                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :max="99999999" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.processes) || readOnly" /></template>
               </el-table-column>
               <el-table-column label="工价(CNY)" width="100">
-                <template #default="{ row }"><el-input-number v-model="row.unit_price" :min="0" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.processes) || readOnly" /></template>
+                <template #default="{ row }"><el-input-number v-model="row.unit_price" :min="0" :max="99999999.99" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.processes) || readOnly" /></template>
               </el-table-column>
               <el-table-column label="小计" width="100"><template #default="{ row }">{{ formatNumber(row.subtotal) }}</template></el-table-column>
               <el-table-column label="操作" width="70" fixed="right" v-if="!readOnly">
@@ -118,7 +118,7 @@
                 </template>
               </el-table-column>
               <el-table-column label="基本用量" width="100">
-                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.packaging) || readOnly" /></template>
+                <template #default="{ row }"><el-input-number v-model="row.usage_amount" :min="0" :max="99999999" :precision="4" :controls="false" @change="$emit('itemChange', row)" size="small" style="width: 100%" :disabled="(!!row.from_standard && !editMode.packaging) || readOnly" /></template>
               </el-table-column>
               <el-table-column label="外箱材积" width="100">
                 <template #default="{ row }">

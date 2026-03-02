@@ -132,6 +132,12 @@ const createStandardCost = async (req, res, next) => {
 const restoreStandardCost = async (req, res, next) => {
   try {
     const { id, version } = req.params;
+    const userRole = req.user.role;
+
+    // 1. 只允许审核员恢复版本
+    if (userRole !== 'reviewer' && userRole !== 'admin') {
+      return res.status(403).json(error('只有审核员可以恢复标准成本版本', 403));
+    }
 
     // 获取当前标准成本以获取 packaging_config_id 和 sales_type
     const standardCost = await StandardCost.findById(id);

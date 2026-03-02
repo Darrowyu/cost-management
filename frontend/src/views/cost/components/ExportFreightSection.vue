@@ -72,6 +72,7 @@
                 <el-input-number
                   v-model="store.quantityInput"
                   :min="1"
+                  :max="99999999"
                   :precision="0"
                   :controls="false"
                   @change="handleQuantityInputChange"

@@ -256,13 +256,56 @@ const approveQuotation = async (req, res) => {
     const { id } = req.params;
     const { comment } = req.body;
     const reviewerId = req.user.id;
-    
-    const quotation = await Quotation.findById(id);
-    if (!quotation) return res.status(404).json(error('报价单不存在', 404));
-    if (quotation.status !== 'submitted') return res.status(400).json(error('当前状态不允许审核操作', 400));
-    if (quotation.created_by === reviewerId) return res.status(403).json(error('不能审核自己创建的报价单', 403)); // 禁止自审核
-    
-    await dbManager.query(`UPDATE quotations SET status = 'approved', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`, [reviewerId, id]);
+    const userRole = req.user.role;
+
+    // 1. 只允许审核员审核
+    if (userRole !== 'reviewer' && userRole !== 'admin') {
+      return res.status(403).json(error('只有审核员可以执行审核操作', 403));
+    }
+
+    // 2. 使用行级锁防止并发竞争
+    const client = await dbManager.getClient();
+    try {
+      await client.query('BEGIN');
+
+      // FOR UPDATE 锁定该行，阻止其他事务同时修改
+      const lockResult = await client.query(
+        `SELECT * FROM quotations WHERE id = $1 FOR UPDATE`,
+        [id]
+      );
+
+      if (lockResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json(error('报价单不存在', 404));
+      }
+
+      const quotation = lockResult.rows[0];
+
+      // 3. 状态检查（在锁内再次检查，防止并发修改）
+      if (quotation.status !== 'submitted') {
+        await client.query('ROLLBACK');
+        return res.status(400).json(error('当前状态不允许审核操作', 400));
+      }
+
+      // 4. 禁止自审核
+      if (quotation.created_by === reviewerId) {
+        await client.query('ROLLBACK');
+        return res.status(403).json(error('不能审核自己创建的报价单', 403));
+      }
+
+      // 5. 执行审核更新
+      await client.query(
+        `UPDATE quotations SET status = 'approved', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`,
+        [reviewerId, id]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
     
     if (comment) await Comment.create({ quotation_id: id, user_id: reviewerId, content: comment });
     
@@ -281,15 +324,54 @@ const rejectQuotation = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     const reviewerId = req.user.id;
-    
+    const userRole = req.user.role;
+
+    // 1. 只允许审核员退回
+    if (userRole !== 'reviewer' && userRole !== 'admin') {
+      return res.status(403).json(error('只有审核员可以执行退回操作', 403));
+    }
+
     if (!reason || !reason.trim()) return res.status(400).json(error('请输入退回原因', 400));
-    
-    const quotation = await Quotation.findById(id);
-    if (!quotation) return res.status(404).json(error('报价单不存在', 404));
-    if (quotation.status !== 'submitted') return res.status(400).json(error('当前状态不允许退回操作', 400));
-    if (quotation.created_by === reviewerId) return res.status(403).json(error('不能退回自己创建的报价单', 403)); // 禁止自退回
-    
-    await dbManager.query(`UPDATE quotations SET status = 'rejected', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`, [reviewerId, id]);
+
+    // 2. 使用行级锁防止并发竞争
+    const client = await dbManager.getClient();
+    try {
+      await client.query('BEGIN');
+
+      const lockResult = await client.query(
+        `SELECT * FROM quotations WHERE id = $1 FOR UPDATE`,
+        [id]
+      );
+
+      if (lockResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json(error('报价单不存在', 404));
+      }
+
+      const quotation = lockResult.rows[0];
+
+      if (quotation.status !== 'submitted') {
+        await client.query('ROLLBACK');
+        return res.status(400).json(error('当前状态不允许退回操作', 400));
+      }
+
+      if (quotation.created_by === reviewerId) {
+        await client.query('ROLLBACK');
+        return res.status(403).json(error('不能退回自己创建的报价单', 403));
+      }
+
+      await client.query(
+        `UPDATE quotations SET status = 'rejected', reviewed_by = $1, reviewed_at = NOW(), updated_at = NOW() WHERE id = $2`,
+        [reviewerId, id]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
     await Comment.create({ quotation_id: id, user_id: reviewerId, content: `【退回原因】${reason}` });
     
     try { await dbManager.query(`INSERT INTO review_history (quotation_id, action, operator_id, comment) VALUES ($1, 'rejected', $2, $3)`, [id, reviewerId, reason]); } catch (e) { logger.debug('记录审核历史失败:', e.message); }

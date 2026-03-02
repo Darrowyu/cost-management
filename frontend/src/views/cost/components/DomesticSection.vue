@@ -14,6 +14,7 @@
           <el-input-number
             v-model="store.quantityInput"
             :min="1"
+            :max="99999999"
             :precision="0"
             :controls="false"
             @change="handleQuantityInputChange"
@@ -53,6 +54,7 @@
           <el-input-number
             v-model="store.domesticCbmPrice"
             :min="0"
+            :max="99999999.99"
             :precision="2"
             :controls="false"
             @change="handleCbmPriceChange"
@@ -66,6 +68,7 @@
           <el-input-number
             v-model="store.form.freight_total"
             :min="0"
+            :max="99999999.99"
             :precision="2"
             :controls="false"
             @change="emitCalculate"
