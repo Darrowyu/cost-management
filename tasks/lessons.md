@@ -36,3 +36,36 @@
 ```
 
 ---
+
+## 2026-03-03
+
+### Bug: 审核退回功能故障
+
+**问题现象**:
+1. 已退回的成本分析详情页无法显示退回原因
+2. 审核退回时报错 `dbManager.getClient is not a function`
+
+**根因分析**:
+1. 前端 `RejectedDetailDialog.vue` 查询 `c.type === 'reject'`，但数据库 `comments` 表没有 `type` 字段
+2. 后端使用 `dbManager.getClient()`，但 `DatabaseManager` 类没有这个方法
+
+**修复方案**:
+```javascript
+// 前端修改 - 通过内容前缀查找
+const rejectComment = comments.find(c => c.content?.includes('【退回原因】'))
+rejectReason.value = rejectComment?.content?.replace('【退回原因】', '') || ''
+
+// 后端修改 - 使用正确的连接池方法
+const client = await dbManager.pool.connect();
+```
+
+**经验总结**:
+1. **API 一致性**: 修改数据库模块后要全局检查所有调用点
+2. **连接池管理**: 只在 `finally` 块中释放连接，避免重复释放
+3. **最小改动**: 优先修复问题本身，避免引入新的复杂性
+
+**相关文件**:
+- `frontend/src/components/review/RejectedDetailDialog.vue:195`
+- `backend/controllers/review/reviewController.js:268,341`
+
+---

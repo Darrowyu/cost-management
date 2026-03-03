@@ -11,6 +11,12 @@ export function usePackagingLogic({ form, packagingConfigs, currentModelCategory
         return config ? `${config.model_name} - ${config.config_name}` : ''
     })
 
+    const selectedConfigMethod = computed(() => {
+        if (!form.packaging_config_id || !packagingConfigs.value.length) return ''
+        const config = packagingConfigs.value.find(c => c.id === form.packaging_config_id)
+        return config ? formatPackagingMethodFromConfig(config) : ''
+    })
+
     const filteredPackagingConfigs = computed(() => {
         if (!form.regulation_id) return []
         let filtered = packagingConfigs.value.filter(c => c.regulation_id === form.regulation_id)
@@ -83,6 +89,7 @@ export function usePackagingLogic({ form, packagingConfigs, currentModelCategory
 
     return {
         selectedConfigInfo,
+        selectedConfigMethod,
         filteredPackagingConfigs,
         groupedPackagingConfigs,
         formatPackagingMethodFromConfig,

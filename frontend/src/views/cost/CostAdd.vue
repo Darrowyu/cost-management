@@ -3,15 +3,26 @@
     <!-- 顶部导航栏 -->
     <CostPageHeader :title="pageTitle" :show-back="true" @back="goBack">
       <template #after-title>
-        <el-tag v-if="isEditMode" type="warning" size="small">编辑中</el-tag>
+        <StatusBadge v-if="isEditMode" type="status" value="editing" />
       </template>
       <template #actions>
-        <div v-if="form.packaging_config_id || form.customer_name">
+        <div v-if="form.packaging_config_id || form.customer_name" class="flex items-center gap-2">
           <span v-if="form.packaging_config_id" class="meta-tag">{{ selectedConfigInfo }}</span>
+          <span v-if="form.packaging_config_id" class="meta-tag meta-tag-accent">{{ selectedConfigMethod }}</span>
           <span v-if="form.customer_name" class="meta-tag">{{ form.customer_name }}</span>
         </div>
       </template>
     </CostPageHeader>
+
+    <!-- 退回原因提示（仅编辑已退回的报价单时显示） -->
+    <el-alert
+      v-if="showRejectionAlert"
+      :title="rejectionReason || '该成本分析已被审核退回，请根据审核意见修改后重新提交'"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px;"
+    />
 
     <!-- 左右分栏主体 -->
     <div class="cost-page-body">
@@ -269,6 +280,7 @@ import CostPreviewPanel from './components/CostPreviewPanel.vue'
 import CostDetailTabs from './components/CostDetailTabs.vue'
 import ExportFreightSection from './components/ExportFreightSection.vue'
 import DomesticSection from './components/DomesticSection.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
 import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
@@ -356,9 +368,9 @@ const {
 const onReferenceStandardCostChange = () => onReferenceStandardCostChangeLogic(loadStandardCostData, shippingInfo)
 const fillReferenceStandardCostData = (data) => fillReferenceStandardCostDataLogic(data, shippingInfo)
 
-const { 
-  selectedConfigInfo, filteredPackagingConfigs, groupedPackagingConfigs, 
-  formatPackagingMethodFromConfig, onPackagingConfigChange 
+const {
+  selectedConfigInfo, selectedConfigMethod, filteredPackagingConfigs, groupedPackagingConfigs,
+  formatPackagingMethodFromConfig, onPackagingConfigChange
 } = usePackagingLogic({ 
   form, packagingConfigs, currentModelCategory, materialCoefficientsCache, materialCoefficient, 
   loadMaterialCoefficients, loadPackagingConfigDetails, currentFactory, loadBomMaterials, 
@@ -379,6 +391,15 @@ const handleCustomerClear = () => handleCustomerClearLogic({ selectedCustomerId,
 
 // 常用地区建议
 const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
+
+// 退回原因（当编辑已退回的报价单时显示）
+const rejectionReason = ref('')
+const isRejected = ref(false)
+
+// 是否显示退回原因提示
+const showRejectionAlert = computed(() => {
+  return isRejected.value || rejectionReason.value
+})
 
 // 明细行操作
 const { addMaterialRow, addProcessRow, addPackagingRow, removeMaterialRow, removeProcessRow, removePackagingRow } = useDetailRows(form, handleCalculateCost)
@@ -585,7 +606,25 @@ onMounted(async () => {
   }
   if (route.params.id) {
     const data = await loadQuotationData(route.params.id)
-    if (data) await fillQuotationData(data, false)
+    if (data) {
+      await fillQuotationData(data, false)
+      // 如果报价单被退回，获取退回原因
+      if (data.quotation?.status === 'rejected') {
+        isRejected.value = true
+        try {
+          const reviewRes = await request.get(`/review/${route.params.id}/detail`)
+          if (reviewRes.success) {
+            const comments = reviewRes.data.comments || []
+            const lastComment = comments[comments.length - 1]
+            if (lastComment?.content) {
+              rejectionReason.value = `审核退回原因：${lastComment.content.replace(/^【退回原因】/, '')}`
+            }
+          }
+        } catch (e) {
+          logger.debug('获取退回原因失败:', e)
+        }
+      }
+    }
   } else if (route.query.copyFromStandardCost) {
     const data = await loadStandardCostData(route.query.copyFromStandardCost)
     if (data) await fillStandardCostData(data)

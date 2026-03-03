@@ -182,6 +182,12 @@ const profitPricing = computed(() => {
   )
 })
 
+// 清理批语内容（去除旧数据前缀）
+const cleanComment = (comment) => {
+  if (!comment) return ''
+  return comment.replace(/^【退回原因】/, '')
+}
+
 // 加载详情
 const loadDetail = async () => {
   loading.value = true
@@ -190,10 +196,10 @@ const loadDetail = async () => {
     if (response.success) {
       quotationDetail.value = response.data.quotation
       reviewHistory.value = response.data.history || []
-      // 获取退回原因
+      // 获取退回原因（显示最后一条评论）
       const comments = response.data.comments || []
-      const rejectComment = comments.find(c => c.type === 'reject')
-      rejectReason.value = rejectComment?.content || comments[comments.length - 1]?.content || ''
+      const lastComment = comments[comments.length - 1]
+      rejectReason.value = cleanComment(lastComment?.content)
     }
   } catch (error) {
     ElMessage.error('加载详情失败')

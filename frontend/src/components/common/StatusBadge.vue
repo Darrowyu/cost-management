@@ -53,7 +53,8 @@ const configMap = {
     draft: { label: '草稿', color: 'slate' },
     submitted: { label: '已提交', color: 'blue' },
     approved: { label: '已审核', color: 'emerald' },
-    rejected: { label: '已退回', color: 'rose' }
+    rejected: { label: '已退回', color: 'rose' },
+    editing: { label: '编辑中', color: 'amber' }
   },
   // 销售类型
   sales_type: {

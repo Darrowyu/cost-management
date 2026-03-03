@@ -62,6 +62,42 @@
           </div>
         </div>
 
+        <!-- 审核历史 -->
+        <div v-if="reviewHistory.length > 0" class="review-section">
+          <div class="review-section-title">
+            审核历史
+            <el-tag v-if="resubmissionCount > 0" type="warning" size="small" style="margin-left: 8px;">
+              第 {{ resubmissionCount + 1 }} 次提交
+            </el-tag>
+          </div>
+          <div class="review-history-timeline">
+            <el-timeline>
+              <el-timeline-item
+                v-for="(record, index) in reviewHistory"
+                :key="index"
+                :type="record.action === 'rejected' ? 'danger' : record.action === 'approved' ? 'success' : 'primary'"
+                :timestamp="formatDateTime(record.created_at)"
+              >
+                <div class="timeline-content">
+                  <span class="timeline-action">{{ getActionText(record.action) }}</span>
+                  <span class="timeline-operator">{{ record.operator_name }}</span>
+                  <p v-if="record.comment" class="timeline-comment">{{ record.comment }}</p>
+                </div>
+              </el-timeline-item>
+            </el-timeline>
+          </div>
+        </div>
+
+        <!-- 上次退回原因提示 -->
+        <el-alert
+          v-if="lastRejectionReason"
+          :title="`上次退回原因：${lastRejectionReason}`"
+          type="warning"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 16px;"
+        />
+
         <!-- 成本明细 -->
         <div class="review-section">
           <div class="review-section-title">成本明细（含差异对比）</div>
@@ -349,6 +385,20 @@ const quotationDetail = ref(null)
 const items = ref([])
 const standardItems = ref([])
 const customProfitTiers = ref([])
+const reviewHistory = ref([])
+
+// 重新提交次数
+const resubmissionCount = computed(() => reviewHistory.value.filter(h => h.action === 'resubmitted').length)
+
+// 上次退回原因
+const lastRejectionReason = computed(() => {
+  for (let i = reviewHistory.value.length - 1; i >= 0; i--) {
+    if (reviewHistory.value[i].action === 'rejected') {
+      return reviewHistory.value[i].comment || ''
+    }
+  }
+  return ''
+})
 
 watch(() => props.modelValue, (val) => {
   if (val && props.quotationId) loadDetail()
@@ -357,6 +407,7 @@ watch(() => props.modelValue, (val) => {
     items.value = []
     standardItems.value = []
     customProfitTiers.value = []
+    reviewHistory.value = []
     activeTab.value = 'material'
     reviewComment.value = ''
   }
@@ -405,6 +456,7 @@ const loadDetail = async () => {
       quotationDetail.value = response.data.quotation
       items.value = response.data.items || []
       standardItems.value = response.data.standardItems || []
+      reviewHistory.value = response.data.history || []
       if (quotationDetail.value.custom_profit_tiers) {
         try {
           customProfitTiers.value = JSON.parse(quotationDetail.value.custom_profit_tiers)
@@ -462,6 +514,17 @@ const getDiffStatusText = (item, category) => {
 const getShippingMethodName = (method) => {
   const map = { fcl_40: '40GP 大柜', fcl_20: '20GP 小柜', lcl: 'LCL 散货' }
   return map[method] || method || '-'
+}
+
+const getActionText = (action) => {
+  const map = {
+    created: '创建',
+    submitted: '提交审核',
+    approved: '审核通过',
+    rejected: '审核退回',
+    resubmitted: '重新提交'
+  }
+  return map[action] || action
 }
 
 // 物流相关计算函数
@@ -575,6 +638,39 @@ const handleReject = async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 审核历史时间线样式 */
+.review-history-timeline {
+  padding: 8px 16px;
+}
+
+.timeline-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-action {
+  font-weight: 500;
+  color: #303133;
+}
+
+.timeline-operator {
+  color: #909399;
+  font-size: 13px;
+}
+
+.timeline-comment {
+  width: 100%;
+  margin: 4px 0 0 0;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .text-green {

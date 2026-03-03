@@ -56,6 +56,10 @@
   @apply text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded;
 }
 
+.meta-tag-accent {
+  @apply text-xs text-blue-600 bg-blue-50 border border-blue-100 px-2 py-1 rounded;
+}
+
 /* ========== 表单区块卡片 ========== */
 .cost-section {
   @apply bg-white rounded-lg border border-slate-200 mb-4 overflow-hidden;

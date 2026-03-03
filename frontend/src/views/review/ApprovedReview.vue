@@ -28,6 +28,21 @@
             <StatusBadge type="status" :value="row.status" />
           </template>
         </el-table-column>
+        <el-table-column prop="latest_comment" label="批注" width="120">
+          <template #default="{ row }">
+            <el-tooltip
+              v-if="row.latest_comment"
+              :content="cleanComment(row.latest_comment)"
+              popper-class="comment-tooltip"
+              placement="top"
+              :show-after="200"
+              effect="light"
+            >
+              <span class="comment-text">{{ truncateComment(row.latest_comment) }}</span>
+            </el-tooltip>
+            <span v-else style="color: #C0C4CC;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="sales_type" label="销售类型" width="90">
           <template #default="{ row }">
             <StatusBadge type="sales_type" :value="row.sales_type" />
@@ -162,6 +177,19 @@ const currentQuotationId = ref(null)
 const loading = computed(() => reviewStore.loading)
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
+// 清理批注内容（去除【退回原因】前缀）
+const cleanComment = (comment) => {
+  if (!comment) return ''
+  return comment.replace(/^【退回原因】/, '')
+}
+
+// 截取批语显示（10个字符，超过显示省略号）
+const truncateComment = (comment) => {
+  if (!comment) return '-'
+  const cleaned = cleanComment(comment)
+  return cleaned.length > 10 ? cleaned.slice(0, 10) + '...' : cleaned
+}
+
 // 格式化包装规格显示（根据二层或三层）
 const formatPackagingSpec = (row) => {
   if (!row.packaging_type) return ''
@@ -272,4 +300,19 @@ onUnmounted(() => {
 /* 操作按钮样式 */
 .delete-btn { color: #F56C6C; }
 .delete-btn:hover:not(:disabled) { color: #f78989; border-color: #f78989; }
+
+/* 批语文本样式 */
+.comment-text {
+  cursor: pointer;
+}
+</style>
+
+<style>
+/* 自定义 tooltip 样式以支持自动换行 */
+.comment-tooltip {
+  max-width: 300px !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  line-height: 1.5 !important;
+}
 </style>
