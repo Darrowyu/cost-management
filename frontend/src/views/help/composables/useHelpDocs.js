@@ -115,26 +115,22 @@ export function useHelpDocs() {
   // 预加载所有文档
   const preloadAllDocs = async () => {
     const allPaths = getAllDocPaths(menu.value)
-    const docs = []
 
-    for (const docPath of allPaths) {
+    const loadDoc = async (docPath) => {
       try {
         const response = await fetch(`/help/${docPath.file}`)
         if (response.ok) {
           const content = await response.text()
-          docs.push({
-            path: docPath.path,
-            title: docPath.title,
-            file: docPath.file,
-            content
-          })
+          return { path: docPath.path, title: docPath.title, file: docPath.file, content }
         }
       } catch (err) {
-        console.warn(`Failed to preload: ${docPath.file}`)
+        console.log(`Failed to preload: ${docPath.file}`)  // 加载失败记录日志，不影响其他文档
       }
+      return null
     }
 
-    allDocsCache.value = docs
+    const results = await Promise.all(allPaths.map(loadDoc))  // 并行加载所有文档
+    allDocsCache.value = results.filter(Boolean)  // 过滤加载失败的文档
   }
 
   // 提取搜索片段

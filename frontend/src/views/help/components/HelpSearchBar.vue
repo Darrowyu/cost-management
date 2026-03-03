@@ -70,7 +70,7 @@ const handleInput = () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
     emit('search', localQuery.value)
-  }, 300)
+  }, 500)  // 防抖时间从300ms改为500ms，减少搜索频率
 }
 
 const clearSearch = () => {

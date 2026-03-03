@@ -53,11 +53,50 @@ export function useDataFill(deps) {
         form.freight_total = quotation.freight_total ? parseFloat(quotation.freight_total) : null
         form.include_freight_in_base = quotation.include_freight_in_base !== false
         form.vat_rate = quotation.vat_rate !== null ? parseFloat(quotation.vat_rate) : (configStore.config.vat_rate || 0.13)
-        form.materials = items.material.items.map(item => ({ category: 'material', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true, after_overhead: item.after_overhead || false, coefficient_applied: true }))
-        form.processes = items.process.items.map(item => ({ category: 'process', item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: item.is_changed || 0, from_standard: true }))
-        form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
-        form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
-        form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
+        form.materials = items.material.items.map(item => ({
+            category: 'material',
+            material_id: item.material_id || null,
+            item_name: item.item_name,
+            usage_amount: parseFloat(item.usage_amount) || 0,
+            unit_price: parseFloat(item.unit_price) || 0,
+            subtotal: parseFloat(item.subtotal) || 0,
+            is_changed: item.is_changed || 0,
+            from_standard: true,
+            after_overhead: item.after_overhead || false,
+            coefficient_applied: true
+        }))
+        form.processes = items.process.items.map(item => ({
+            category: 'process',
+            item_name: item.item_name,
+            usage_amount: parseFloat(item.usage_amount) || 0,
+            unit_price: parseFloat(item.unit_price) || 0,
+            subtotal: parseFloat(item.subtotal) || 0,
+            is_changed: item.is_changed || 0,
+            from_standard: true
+        }))
+        form.packaging = items.packaging.items.map(item => ({
+            category: 'packaging',
+            material_id: item.material_id || null,
+            item_name: item.item_name,
+            usage_amount: parseFloat(item.usage_amount) || 0,
+            unit_price: parseFloat(item.unit_price) || 0,
+            carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
+            subtotal: parseFloat(item.subtotal) || 0,
+            is_changed: 0,
+            from_standard: true
+        }))
+        form.materials.forEach(m => {
+            if (!m.material_id) {
+                const found = allMaterials.value.find(mat => mat.name === m.item_name)
+                if (found) m.material_id = found.id
+            }
+        })
+        form.packaging.forEach(p => {
+            if (!p.material_id) {
+                const found = allMaterials.value.find(mat => mat.name === p.item_name)
+                if (found) p.material_id = found.id
+            }
+        })
         if (quotation.pc_per_bag && quotation.bags_per_box && quotation.boxes_per_carton) {
             const pcsPerCarton = quotation.pc_per_bag * quotation.bags_per_box * quotation.boxes_per_carton
             const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
@@ -66,12 +105,29 @@ export function useDataFill(deps) {
             quantityUnit.value = 'pcs'
             calculateShippingInfo(form, handleCalculateCost)
         }
-        if (!quantityInput.value && form.quantity) { quantityInput.value = form.quantity; quantityUnit.value = 'pcs' }
+        if (!quantityInput.value && form.quantity) {
+            quantityInput.value = form.quantity
+            quantityUnit.value = 'pcs'
+        }
         if (quotation.custom_profit_tiers) {
-            try { const parsed = JSON.parse(quotation.custom_profit_tiers); customProfitTiers.value = parsed.map(t => ({ profitRate: t.profitRate, profitPercentage: t.profitPercentage, price: t.price, sortKey: t.profitRate ? parseFloat(t.profitRate) : 9999 })) }
+            try {
+                const parsed = JSON.parse(quotation.custom_profit_tiers)
+                customProfitTiers.value = parsed.map(t => ({
+                    profitRate: t.profitRate,
+                    profitPercentage: t.profitPercentage,
+                    price: t.price,
+                    sortKey: t.profitRate ? parseFloat(t.profitRate) : 9999
+                }))
+            }
             catch (e) { customProfitTiers.value = [] }
         }
-        if (fees?.length > 0) form.customFees = fees.map((fee, i) => ({ name: fee.name, rate: fee.rate, sortOrder: fee.sortOrder ?? i }))
+        if (fees?.length > 0) {
+            form.customFees = fees.map((fee, i) => ({
+                name: fee.name,
+                rate: fee.rate,
+                sortOrder: fee.sortOrder ?? i
+            }))
+        }
         else form.customFees = []
         handleCalculateCost()
         ElMessage.success(isCopy ? '报价单数据已复制，请修改后保存' : '报价单数据已加载')
@@ -82,7 +138,12 @@ export function useDataFill(deps) {
      */
     const fillStandardCostData = async (data) => {
         const { standardCost, items } = data
-        if (standardCost.model_category) { currentModelCategory.value = standardCost.model_category; if (materialCoefficientsCache.value[standardCost.model_category]) materialCoefficient.value = materialCoefficientsCache.value[standardCost.model_category] }
+        if (standardCost.model_category) {
+            currentModelCategory.value = standardCost.model_category
+            if (materialCoefficientsCache.value[standardCost.model_category]) {
+                materialCoefficient.value = materialCoefficientsCache.value[standardCost.model_category]
+            }
+        }
         form.regulation_id = standardCost.regulation_id || null
         await nextTick()
         form.packaging_config_id = standardCost.packaging_config_id || null
@@ -107,15 +168,58 @@ export function useDataFill(deps) {
             quantityInput.value = standardCost.quantity
             quantityUnit.value = 'pcs'
         }
-        if (items?.material) form.materials = items.material.items.map(item => ({ category: 'material', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true, after_overhead: item.after_overhead || false, coefficient_applied: true }))
-        if (items?.process) form.processes = items.process.items.map(item => ({ category: 'process', item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
+        if (items?.material) {
+            form.materials = items.material.items.map(item => ({
+                category: 'material',
+                material_id: item.material_id || null,
+                item_name: item.item_name,
+                usage_amount: parseFloat(item.usage_amount) || 0,
+                unit_price: parseFloat(item.unit_price) || 0,
+                subtotal: parseFloat(item.subtotal) || 0,
+                is_changed: 0,
+                from_standard: true,
+                after_overhead: item.after_overhead || false,
+                coefficient_applied: true
+            }))
+        }
+        if (items?.process) {
+            form.processes = items.process.items.map(item => ({
+                category: 'process',
+                item_name: item.item_name,
+                usage_amount: parseFloat(item.usage_amount) || 0,
+                unit_price: parseFloat(item.unit_price) || 0,
+                subtotal: parseFloat(item.subtotal) || 0,
+                is_changed: 0,
+                from_standard: true
+            }))
+        }
         if (items?.packaging) {
-            form.packaging = items.packaging.items.map(item => ({ category: 'packaging', material_id: item.material_id || null, item_name: item.item_name, usage_amount: parseFloat(item.usage_amount) || 0, unit_price: parseFloat(item.unit_price) || 0, carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null, subtotal: parseFloat(item.subtotal) || 0, is_changed: 0, from_standard: true }))
+            form.packaging = items.packaging.items.map(item => ({
+                category: 'packaging',
+                material_id: item.material_id || null,
+                item_name: item.item_name,
+                usage_amount: parseFloat(item.usage_amount) || 0,
+                unit_price: parseFloat(item.unit_price) || 0,
+                carton_volume: item.carton_volume ? parseFloat(item.carton_volume) : null,
+                subtotal: parseFloat(item.subtotal) || 0,
+                is_changed: 0,
+                from_standard: true
+            }))
             const cartonMaterial = items.packaging.items.find(item => item.carton_volume && item.carton_volume > 0)
             if (cartonMaterial) shippingInfo.cartonVolume = cartonMaterial.carton_volume
         }
-        form.materials.forEach(m => { if (!m.material_id) { const found = allMaterials.value.find(mat => mat.name === m.item_name); if (found) m.material_id = found.id } })
-        form.packaging.forEach(p => { if (!p.material_id) { const found = allMaterials.value.find(mat => mat.name === p.item_name); if (found) p.material_id = found.id } })
+        form.materials.forEach(m => {
+            if (!m.material_id) {
+                const found = allMaterials.value.find(mat => mat.name === m.item_name)
+                if (found) m.material_id = found.id
+            }
+        })
+        form.packaging.forEach(p => {
+            if (!p.material_id) {
+                const found = allMaterials.value.find(mat => mat.name === p.item_name)
+                if (found) p.material_id = found.id
+            }
+        })
         if (form.quantity && shippingInfo.pcsPerCarton) calculateShippingInfo(form, handleCalculateCost)
         handleCalculateCost()
         ElMessage.success('标准成本数据已复制，请填写客户信息后保存')
