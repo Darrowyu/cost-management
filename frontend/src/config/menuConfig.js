@@ -50,6 +50,7 @@ export const menuConfig = [
   { type: 'divider', label: '系统管理' },
 
   { id: 'config', label: '系统配置', icon: 'ri-equalizer-line', route: '/config' },
+  { id: 'permission', label: '权限管理', icon: 'ri-shield-keyhole-line', route: '/config/permissions', roles: ['admin'] },
   { id: 'profile', label: '个人设置', icon: 'ri-user-line', route: '/profile', roles: ['purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'] },
   { id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users', roles: ['admin'] }
 ]

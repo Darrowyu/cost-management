@@ -66,6 +66,12 @@ const routes = [
         component: () => import('../views/config/SystemConfig.vue')
       },
       {
+        path: 'config/permissions',
+        name: 'PermissionManage',
+        component: () => import('../views/config/PermissionManage.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'cost/add',
         name: 'CostAdd',
         component: () => import('../views/cost/CostAdd.vue'),
