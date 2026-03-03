@@ -25,7 +25,26 @@
       "Bash(git checkout:*)",
       "Skill(claude-hud:configure)",
       "Bash(claude:*)",
-      "Bash(cmd /c echo:*)"
+      "Bash(cmd /c echo:*)",
+      "Bash(winget install:*)",
+      "Bash(gh auth:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" version:*)",
+      "Skill(agent-browser)",
+      "Bash(npx playwright:*)",
+      "Bash(echo:*)",
+      "Bash(export:*)",
+      "Bash(gh version:*)",
+      "Bash(alias:*)",
+      "Bash(gh:*)",
+      "Bash(npm install:*)",
+      "Skill(git-commit)",
+      "mcp__Filesystem__list_directory",
+      "mcp__Sequential-thinking__sequentialthinking",
+      "mcp__Filesystem__write_file",
+      "mcp__Filesystem__edit_file",
+      "mcp__Filesystem__read_text_file",
+      "Bash(git check-ignore:*)",
+      "mcp__Filesystem__create_directory"
     ]
   }
 }

@@ -24,16 +24,14 @@
         class="permission-item"
         :class="{ selected: selectedPermissions.includes(perm.code) }"
       >
-        <el-tooltip :content="perm.description" placement="top">
-          <div class="permission-check">
-            <el-checkbox
-              :model-value="selectedPermissions.includes(perm.code)"
-              @change="$emit('toggle-permission', perm.code)"
-            >
-              <span class="permission-label">{{ perm.label }}</span>
-            </el-checkbox>
-          </div>
-        </el-tooltip>
+        <div class="permission-check">
+          <el-checkbox
+            :model-value="selectedPermissions.includes(perm.code)"
+            @change="$emit('toggle-permission', perm.code)"
+          >
+            <span class="permission-label">{{ perm.label }}</span>
+          </el-checkbox>
+        </div>
       </div>
     </div>
   </div>
