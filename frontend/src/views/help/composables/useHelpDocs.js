@@ -5,8 +5,7 @@ import {
   helpMenuConfig,
   filterMenuByRole,
   findDocByPath,
-  getPrevNextDoc,
-  getAllDocPaths
+  getPrevNextDoc
 } from '../../../utils/helpConfig'
 import { renderMarkdown } from '../../../utils/markdownRenderer'
 
@@ -87,6 +86,21 @@ export function useHelpDocs() {
     }
   }
 
+  // 加载搜索索引
+  const loadSearchIndex = async () => {
+    if (allDocsCache.value.length > 0) return // 已缓存则跳过
+
+    try {
+      const response = await fetch('/help/search-index.json')
+      if (response.ok) {
+        const index = await response.json()
+        allDocsCache.value = index.documents || []
+      }
+    } catch (err) {
+      console.error('加载搜索索引失败:', err.message)
+    }
+  }
+
   // 搜索功能
   const search = async (query) => {
     if (!query.trim()) {
@@ -94,43 +108,23 @@ export function useHelpDocs() {
       return
     }
 
-    // 预加载所有文档（如果还没加载）
+    // 加载索引（如果还没加载）
     if (allDocsCache.value.length === 0) {
-      await preloadAllDocs()
+      await loadSearchIndex()
     }
 
     const lowerQuery = query.toLowerCase()
     searchResults.value = allDocsCache.value
       .filter(doc =>
         doc.title.toLowerCase().includes(lowerQuery) ||
-        doc.content.toLowerCase().includes(lowerQuery)
+        doc.content.toLowerCase().includes(lowerQuery) ||
+        doc.keywords?.some(k => k.includes(lowerQuery))
       )
       .slice(0, 10)
       .map(doc => ({
         ...doc,
         snippet: extractSnippet(doc.content, lowerQuery)
       }))
-  }
-
-  // 预加载所有文档
-  const preloadAllDocs = async () => {
-    const allPaths = getAllDocPaths(menu.value)
-
-    const loadDoc = async (docPath) => {
-      try {
-        const response = await fetch(`/help/${docPath.file}`)
-        if (response.ok) {
-          const content = await response.text()
-          return { path: docPath.path, title: docPath.title, file: docPath.file, content }
-        }
-      } catch (err) {
-        console.log(`Failed to preload: ${docPath.file}`)  // 加载失败记录日志，不影响其他文档
-      }
-      return null
-    }
-
-    const results = await Promise.all(allPaths.map(loadDoc))  // 并行加载所有文档
-    allDocsCache.value = results.filter(Boolean)  // 过滤加载失败的文档
   }
 
   // 提取搜索片段

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, isTokenExpired, clearAuth } from '../utils/auth'
+import { helpMenuConfig, filterMenuByRole, findDocByPath } from '../utils/helpConfig'
 
 const routes = [
   {
@@ -134,7 +135,44 @@ const routes = [
         path: 'help/:pathMatch(.*)*',
         name: 'Help',
         component: () => import('../views/help/HelpView.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true },
+        beforeEnter: async (to, from, next) => {
+          const { useAuthStore } = await import('../store/auth')
+          const authStore = useAuthStore()
+          const userRole = authStore.user?.role || 'readonly'
+          const menu = filterMenuByRole(helpMenuConfig, userRole)
+
+          // 如果访问 /help 根路径，重定向到第一个可见文档
+          if (to.path === '/help') {
+            const firstDoc = menu[0]
+            if (firstDoc) {
+              next({ path: firstDoc.path, replace: true })
+              return
+            }
+          }
+
+          const doc = findDocByPath(menu, to.path)
+          if (!doc) {
+            to.meta.docContent = ''
+            to.meta.docError = '文档未找到'
+            next()
+            return
+          }
+
+          try {
+            const response = await fetch(`/help/${doc.file}`)
+            if (!response.ok) {
+              throw new Error(`加载失败: ${response.status}`)
+            }
+            const content = await response.text()
+            to.meta.docContent = content
+            to.meta.docError = null
+          } catch (err) {
+            to.meta.docContent = ''
+            to.meta.docError = err.message
+          }
+          next()
+        }
       }
     ]
   }

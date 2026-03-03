@@ -60,8 +60,10 @@
           :loading="loading"
           :error="error"
           :rendered-content="renderedContent"
+          :raw-content="rawContent"
           :navigation="navigation"
-          @retry="loadDoc(currentPath)"
+          @retry="retryLoad"
+          @navigate="handleNavigate"
         />
       </main>
     </div>
@@ -82,36 +84,73 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue' // 组合式API
+import { useRoute, useRouter } from 'vue-router'
+import { throttle } from 'lodash-es'
 import { useHelpDocs } from './composables/useHelpDocs'
+import { renderMarkdown } from '../../utils/markdownRenderer'
 import HelpSidebar from './components/HelpSidebar.vue'
 import HelpSearchBar from './components/HelpSearchBar.vue'
 import HelpContent from './components/HelpContent.vue'
 
 const route = useRoute()
+const router = useRouter()
+
+// 从路由 meta 获取文档内容和错误信息
+const docContent = computed(() => route.meta.docContent || '')
+const docError = computed(() => route.meta.docError || null)
+
+// 使用帮助文档逻辑（传入初始内容）
 const {
-  loading,
-  error,
-  renderedContent,
+  rawContent,
   searchQuery,
   searchResults,
   menu,
   currentPath,
   breadcrumbs,
   navigation,
-  loadDoc,
   search,
-  saveProgress
-} = useHelpDocs()
+  saveProgress,
+  restoreProgress
+} = useHelpDocs({
+  initialContent: docContent.value,
+  initialError: docError.value
+})
+
+// 加载状态（由路由守卫控制，这里保持兼容性）
+const loading = ref(false)
+// 错误状态（从路由 meta 获取）
+const error = computed(() => docError.value)
+// 渲染后的内容
+const renderedContent = computed(() => renderMarkdown(rawContent.value))
 
 const showMobileMenu = ref(false)
 const mainContent = ref(null)
 
-// 监听滚动保存进度
+// 监听路由变化更新内容
+watch(docContent, (newContent) => {
+  if (newContent !== undefined) {
+    rawContent.value = newContent
+  }
+})
+
+// 节流保存进度，每 500ms 最多执行一次
+const throttledSave = throttle((path, scrollTop) => {
+  saveProgress(path, scrollTop)
+}, 500)
+
+// 页面卸载前确保保存进度
+const handleBeforeUnload = () => {
+  if (mainContent.value) {
+    throttledSave.flush() // 立即执行待保存的进度
+    saveProgress(currentPath.value, mainContent.value.scrollTop)
+  }
+}
+
+// 监听滚动，使用节流函数
 const handleScroll = () => {
   if (mainContent.value) {
-    saveProgress(currentPath.value, mainContent.value.scrollTop)
+    throttledSave(currentPath.value, mainContent.value.scrollTop)
   }
 }
 
@@ -119,38 +158,34 @@ onMounted(() => {
   if (mainContent.value) {
     mainContent.value.addEventListener('scroll', handleScroll)
   }
+  window.addEventListener('beforeunload', handleBeforeUnload)
 })
 
 onUnmounted(() => {
   if (mainContent.value) {
     mainContent.value.removeEventListener('scroll', handleScroll)
   }
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  throttledSave.cancel() // 取消待执行的节流函数，防止内存泄漏
 })
+
+// 处理导航事件：先回到顶部，再跳转
+const handleNavigate = (path) => {
+  if (mainContent.value) {
+    mainContent.value.scrollTop = 0
+  }
+  router.push(path)
+}
+
+// 重试加载（刷新页面触发路由守卫重新加载）
+const retryLoad = () => {
+  window.location.reload()
+}
 
 // 切换文档时恢复滚动位置
 watch(currentPath, (newPath, oldPath) => {
   if (mainContent.value && newPath !== oldPath) {
-    // 检查是否是点击导航按钮切换（通过 URL query 参数判断）
-    const isNavClick = route.query.nav === 'true'
-    if (isNavClick) {
-      // 点击导航按钮，强制回到顶部
-      mainContent.value.scrollTop = 0
-      // 清除标记（替换路由，移除 query 参数）
-      window.history.replaceState(null, '', window.location.pathname + window.location.hash.replace('?nav=true', ''))
-    } else {
-      // 正常切换，尝试恢复位置
-      const saved = localStorage.getItem(`help_progress_${newPath}`)
-      if (saved) {
-        const { scrollTop } = JSON.parse(saved)
-        setTimeout(() => {
-          if (mainContent.value) {
-            mainContent.value.scrollTop = scrollTop
-          }
-        }, 100)
-      } else {
-        mainContent.value.scrollTop = 0
-      }
-    }
+    restoreProgress(newPath, mainContent)
   }
 })
 </script>
