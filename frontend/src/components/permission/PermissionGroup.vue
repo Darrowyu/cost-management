@@ -3,9 +3,9 @@
     <div class="group-header" @click.self="toggleCollapse">
       <div class="group-title">
         <span>{{ modules[moduleKey]?.label || moduleKey }}</span>
-        <span class="permission-count">{{ selectedPermissions.filter(p => groupPermissions.map(g => g.code).includes(p)).length }}/{{ groupPermissions.length }}</span>
       </div>
       <div class="group-actions">
+        <span class="permission-count">{{ selectedPermissions.filter(p => groupPermissions.map(g => g.code).includes(p)).length }}/{{ groupPermissions.length }}</span>
         <el-checkbox
           :model-value="isGroupAllSelected(moduleKey)"
           :indeterminate="isGroupIndeterminate(moduleKey)"
