@@ -46,7 +46,8 @@ export function useDataFill(deps) {
         form.customer_region = quotation.customer_region
         form.sales_type = quotation.sales_type
         form.shipping_method = quotation.shipping_method || ''
-        form.port_type = quotation.port === 'FOB深圳' ? 'fob_shenzhen' : 'other'
+        // 判断港口类型：port 为空/null 表示 FOB 深圳，有值表示其他港口
+        form.port_type = quotation.port ? 'other' : 'fob_shenzhen'
         form.port = quotation.port || ''
         form.quantity = quotation.quantity ? parseInt(quotation.quantity) : null
         form.freight_total = quotation.freight_total ? parseFloat(quotation.freight_total) : null

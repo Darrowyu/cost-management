@@ -17,7 +17,7 @@
     <!-- 退回原因提示（仅编辑已退回的报价单时显示） -->
     <el-alert
       v-if="showRejectionAlert"
-      :title="rejectionReason || '该成本分析已被审核退回，请根据审核意见修改后重新提交'"
+      :title="rejectionComment ? `该成本分析已被审核退回，原因：${rejectionComment}` : '该成本分析已被审核退回，请根据审核意见修改后重新提交'"
       type="warning"
       :closable="false"
       show-icon
@@ -283,6 +283,8 @@ import DomesticSection from './components/DomesticSection.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { formatNumber } from '@/utils/format'
 import { useConfigStore } from '@/store/config'
+import logger from '@/utils/logger'
+import request from '@/utils/request'
 import { useFreightCalculation, useCostCalculation, useQuotationData, useCustomerSearch, useMaterialSearch, useCustomFees, useQuotationDraft } from '@/composables'
 import { AUTO_SAVE_INTERVAL, COMMON_REGIONS } from './config/costAddConfig'
 import { useDetailRows, useRegionSuggestion } from './composables/useDetailRows'
@@ -394,6 +396,7 @@ const { suggestRegions } = useRegionSuggestion(COMMON_REGIONS)
 
 // 退回原因（当编辑已退回的报价单时显示）
 const rejectionReason = ref('')
+const rejectionComment = ref('')
 const isRejected = ref(false)
 
 // 是否显示退回原因提示
@@ -608,16 +611,23 @@ onMounted(async () => {
     const data = await loadQuotationData(route.params.id)
     if (data) {
       await fillQuotationData(data, false)
-      // 如果报价单被退回，获取退回原因
+      // 如果报价单被退回，获取退回原因和批注
       if (data.quotation?.status === 'rejected') {
         isRejected.value = true
         try {
           const reviewRes = await request.get(`/review/${route.params.id}/detail`)
+          logger.debug('审核详情API返回:', reviewRes)
           if (reviewRes.success) {
             const comments = reviewRes.data.comments || []
-            const lastComment = comments[comments.length - 1]
-            if (lastComment?.content) {
-              rejectionReason.value = `审核退回原因：${lastComment.content.replace(/^【退回原因】/, '')}`
+            logger.debug('评论列表:', comments)
+            if (comments.length > 0) {
+              const lastComment = comments[0]
+              logger.debug('最新评论:', lastComment)
+              if (lastComment?.content) {
+                const cleanContent = lastComment.content.replace(/^【退回原因】/, '').trim()
+                rejectionReason.value = `审核退回原因：${cleanContent}`
+                rejectionComment.value = cleanContent
+              }
             }
           }
         } catch (e) {
