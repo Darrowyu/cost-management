@@ -62,9 +62,10 @@ defineEmits(['save', 'reset', 'toggle-permission', 'toggle-group-all'])
 .permission-panel {
   flex: 1;
   background: var(--el-bg-color);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--el-border-color-light);
   padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .panel-header {

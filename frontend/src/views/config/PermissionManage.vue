@@ -53,13 +53,32 @@
 
         <!-- 权限列表 -->
         <div v-else class="permission-groups">
+          <!-- 全局操作栏 -->
+          <div class="global-actions">
+            <el-button-group>
+              <el-button size="small" @click="expandAll">
+                <i class="ri-arrow-down-s-line"></i> 展开全部
+              </el-button>
+              <el-button size="small" @click="collapseAll">
+                <i class="ri-arrow-up-s-line"></i> 折叠全部
+              </el-button>
+            </el-button-group>
+            <el-button size="small" type="primary" plain @click="selectAll">
+              <i class="ri-check-double-line"></i> 全选所有权限
+            </el-button>
+            <el-button size="small" @click="clearAll">
+              <i class="ri-eraser-line"></i> 清空所有
+            </el-button>
+          </div>
+
           <PermissionGroup
             v-for="(groupPermissions, moduleKey) in groupedPermissions"
             :key="moduleKey"
+            :ref="el => { if (el) groupRefs[moduleKey] = el }"
             :module-key="moduleKey"
             :group-permissions="groupPermissions"
             :modules="modules"
-            :has-permission="hasPermission"
+            :selected-permissions="selectedRolePermissionList"
             :is-group-all-selected="isGroupAllSelected"
             :is-group-indeterminate="isGroupIndeterminate"
             @toggle-permission="togglePermission"
@@ -78,7 +97,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { usePermissions } from '../../composables/usePermissions'
 import RoleList from '../../components/permission/RoleList.vue'
 import PermissionGroup from '../../components/permission/PermissionGroup.vue'
@@ -89,19 +108,51 @@ const {
   roles,
   selectedRole,
   groupedPermissions,
+  selectedRolePermissionList,  // 当前角色权限列表
   getRoleIcon,
   getRoleDescription,
   getRolePermissionCount,
   selectRole,
-  hasPermission,
   togglePermission,
   isGroupAllSelected,
   isGroupIndeterminate,
   toggleGroupAll,
   loadPermissions,
   savePermissions,
-  resetPermissions
+  resetPermissions,
 } = usePermissions()
+
+const groupRefs = ref({})  // 存储子组件引用
+
+// 展开所有
+const expandAll = () => {
+  Object.values(groupRefs.value).forEach(group => {
+    if (group && group.expand) group.expand()
+  })
+}
+
+// 折叠所有
+const collapseAll = () => {
+  Object.values(groupRefs.value).forEach(group => {
+    if (group && group.collapse) group.collapse()
+  })
+}
+
+// 全选所有权限
+const selectAll = () => {
+  Object.keys(groupedPermissions.value).forEach(moduleKey => {
+    if (!isGroupAllSelected(moduleKey)) {
+      toggleGroupAll(moduleKey, true)  // 批量全选该模块
+    }
+  })
+}
+
+// 清空所有权限
+const clearAll = () => {
+  Object.keys(groupedPermissions.value).forEach(moduleKey => {
+    toggleGroupAll(moduleKey, false)  // 批量清空该模块
+  })
+}
 
 onMounted(() => {
   loadPermissions()
@@ -144,16 +195,17 @@ onMounted(() => {
 .permission-panel {
   flex: 1;
   background: var(--el-bg-color);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--el-border-color-light);
   padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--el-border-color-light);
 }
@@ -173,14 +225,16 @@ onMounted(() => {
   font-weight: normal;
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-light);
 }
 
 .role-desc {
   margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
+  line-height: 1.5;
 }
 
 .actions {
@@ -191,7 +245,24 @@ onMounted(() => {
 .permission-groups {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+}
+
+.global-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--el-fill-color-light);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.global-actions .el-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .empty-state {
@@ -201,10 +272,11 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background: var(--el-bg-color);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px dashed var(--el-border-color);
   color: var(--el-text-color-secondary);
   min-height: 400px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .empty-state i {

@@ -51,9 +51,10 @@ defineEmits(['select-role'])
   width: 280px;
   flex-shrink: 0;
   background: var(--el-bg-color);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--el-border-color-light);
   padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .role-sidebar h3 {
@@ -61,31 +62,44 @@ defineEmits(['select-role'])
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-sidebar h3::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: var(--el-color-primary);
+  border-radius: 2px;
 }
 
 .role-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .role-item {
   display: flex;
   align-items: center;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
   border: 1px solid transparent;
 }
 
 .role-item:hover {
   background: var(--el-fill-color-light);
+  transform: translateX(2px);
 }
 
 .role-item.active {
   background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
 }
 
 .role-icon {

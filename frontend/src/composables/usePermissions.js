@@ -13,6 +13,12 @@ export function usePermissions() {
   const rolePermissions = ref({})
   const originalPermissions = ref({})
 
+  // 当前选中角色的权限列表（计算属性，用于响应式绑定）
+  const selectedRolePermissionList = computed(() => {
+    if (!selectedRole.value) return []
+    return rolePermissions.value[selectedRole.value.code] || []
+  })
+
   // 计算权限分组
   const groupedPermissions = computed(() => {
     const groups = {}
@@ -76,15 +82,14 @@ export function usePermissions() {
     if (!selectedRole.value || selectedRole.value.code === 'admin') return
 
     const roleCode = selectedRole.value.code
-    if (!rolePermissions.value[roleCode]) {
-      rolePermissions.value[roleCode] = []
-    }
+    const currentPerms = rolePermissions.value[roleCode] || []
+    const index = currentPerms.indexOf(permissionCode)
 
-    const index = rolePermissions.value[roleCode].indexOf(permissionCode)
+    // 创建新数组确保响应式更新
     if (index > -1) {
-      rolePermissions.value[roleCode].splice(index, 1)
+      rolePermissions.value[roleCode] = currentPerms.filter(p => p !== permissionCode)
     } else {
-      rolePermissions.value[roleCode].push(permissionCode)
+      rolePermissions.value[roleCode] = [...currentPerms, permissionCode]
     }
   }
 
@@ -113,21 +118,18 @@ export function usePermissions() {
     const groupPerms = groupedPermissions.value[moduleKey] || []
     const roleCode = selectedRole.value.code
 
-    if (!rolePermissions.value[roleCode]) {
-      rolePermissions.value[roleCode] = []
-    }
+    // 创建新数组确保响应式更新
+    const currentPerms = rolePermissions.value[roleCode] || []
 
     if (selected) {
-      // 添加该组所有权限
-      groupPerms.forEach(p => {
-        if (!rolePermissions.value[roleCode].includes(p.code)) {
-          rolePermissions.value[roleCode].push(p.code)
-        }
-      })
-    } else {
-      // 移除该组所有权限
+      // 添加该组所有权限（创建新数组）
       const groupCodes = groupPerms.map(p => p.code)
-      rolePermissions.value[roleCode] = rolePermissions.value[roleCode].filter(
+      const newPerms = [...new Set([...currentPerms, ...groupCodes])]
+      rolePermissions.value[roleCode] = newPerms
+    } else {
+      // 移除该组所有权限（创建新数组）
+      const groupCodes = groupPerms.map(p => p.code)
+      rolePermissions.value[roleCode] = currentPerms.filter(
         p => !groupCodes.includes(p)
       )
     }
@@ -143,10 +145,12 @@ export function usePermissions() {
         modules.value = response.data.modules
         roles.value = response.data.roles
 
-        // 初始化角色权限
+        // 初始化角色权限（创建新对象确保响应式）
+        const initialPerms = {}
         response.data.roles.forEach(role => {
-          rolePermissions.value[role.code] = [...role.permissions]
+          initialPerms[role.code] = [...role.permissions]
         })
+        rolePermissions.value = initialPerms
 
         // 保存原始值用于重置
         originalPermissions.value = JSON.parse(JSON.stringify(rolePermissions.value))
@@ -178,7 +182,11 @@ export function usePermissions() {
 
       if (response.success) {
         ElMessage.success(`${selectedRole.value.name} 权限已保存`)
-        originalPermissions.value[roleCode] = [...rolePermissions.value[roleCode]]
+        // 创建新对象确保响应式更新
+        originalPermissions.value = {
+          ...originalPermissions.value,
+          [roleCode]: [...rolePermissions.value[roleCode]]
+        }
       }
     } catch (err) {
       ElMessage.error('保存权限失败')
@@ -201,7 +209,11 @@ export function usePermissions() {
       }
     ).then(() => {
       const roleCode = selectedRole.value.code
-      rolePermissions.value[roleCode] = [...(originalPermissions.value[roleCode] || [])]
+      // 创建新数组确保响应式更新
+      rolePermissions.value = {
+        ...rolePermissions.value,
+        [roleCode]: [...(originalPermissions.value[roleCode] || [])]
+      }
       ElMessage.info('已重置')
     }).catch(() => {})
   }
@@ -216,6 +228,7 @@ export function usePermissions() {
     selectedRole,
     rolePermissions,
     groupedPermissions,
+    selectedRolePermissionList,  // 当前角色权限列表（响应式）
     // 方法
     getRoleIcon,
     getRoleDescription,
