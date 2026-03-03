@@ -46,3 +46,6 @@ LOGIN-INFO.md
 
 # Uploads
 backend/uploads/
+
+# Worktrees
+.worktrees/
