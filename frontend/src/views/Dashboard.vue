@@ -140,11 +140,6 @@
                 <p class="text-xs font-medium" :class="getNotificationClass(activity.type).titleColor">
                   {{ getNotificationTitle(activity.type) }}
                 </p>
-                <span
-                  v-if="isUnread(activity)"
-                  class="w-1.5 h-1.5 rounded-full"
-                  :class="getNotificationClass(activity.type).dotColor"
-                ></span>
               </div>
               <p class="text-xs text-slate-600 whitespace-normal break-words leading-relaxed">{{ activity.content }}</p>
               <p class="text-xs text-slate-400 mt-1">{{ activity.time }}</p>
@@ -537,11 +532,6 @@ const getNotificationTitle = (type) => {
   return titles[type] || '消息通知'
 }
 
-// 判断是否为未读
-const isUnread = (item) => {
-  if (!item.time) return false
-  return /刚刚|分钟前|小时前/.test(item.time)
-}
 
 // 带类型的通知列表
 const recentActivitiesWithType = computed(() => {

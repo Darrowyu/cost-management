@@ -83,8 +83,8 @@
               </div>
 
               <!-- 通知列表 -->
-              <div class="max-h-[320px] overflow-y-auto">
-                <div v-if="loading" class="flex items-center justify-center py-8">
+              <div class="max-h-[400px] overflow-y-auto notification-list" @scroll="handleScroll">
+                <div v-if="loading && currentPage === 1" class="flex items-center justify-center py-8">
                   <el-icon class="animate-spin text-slate-400"><i class="ri-loader-4-line text-xl"></i></el-icon>
                 </div>
 
@@ -98,10 +98,11 @@
 
                 <div v-else class="divide-y divide-slate-50">
                   <div
-                    v-for="(item, index) in notificationList.slice(0, 5)"
-                    :key="index"
-                    class="px-4 py-3 hover:bg-slate-50 transition-colors duration-150"
-                    :class="getNotificationClass(item.type).bgHover"
+                    v-for="(item, index) in paginatedNotifications"
+                    :key="item.id || item.content || index"
+                    class="notification-item relative px-4 py-3 cursor-pointer transition-all duration-300 ease"
+                    :class="getNotificationItemClass(item)"
+                    @click="handleNotificationClick(item)"
                   >
                     <div class="flex items-start gap-3">
                       <div
@@ -112,33 +113,45 @@
                       </div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                          <p class="text-sm font-medium" :class="getNotificationClass(item.type).titleColor">
+                          <p class="text-sm font-medium" :class="getNotificationTitleClass(item)">
                             {{ getNotificationTitle(item.type) }}
                           </p>
                           <span
                             v-if="isUnread(item)"
-                            class="w-1.5 h-1.5 rounded-full"
+                            class="unread-dot w-1.5 h-1.5 rounded-full"
                             :class="getNotificationClass(item.type).dotColor"
                           ></span>
                         </div>
-                        <p class="text-sm text-slate-600 leading-relaxed">
+                        <p class="text-sm leading-relaxed" :class="getNotificationContentClass(item)">
                           {{ item.content }}
                         </p>
-                        <p class="text-xs text-slate-400 mt-1">
+                        <p class="text-xs mt-1" :class="isUnread(item) ? 'text-slate-400' : 'text-[#909399]'">
                           {{ item.time }}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                <!-- 加载更多 -->
+                <div v-if="hasMoreNotifications" class="py-3 text-center">
+                  <button
+                    v-if="!loadingMore"
+                    class="text-xs text-slate-500 hover:text-blue-600 transition-colors px-4 py-2 rounded-lg hover:bg-slate-100"
+                    @click="loadMoreNotifications"
+                  >
+                    加载更多
+                  </button>
+                  <el-icon v-else class="animate-spin text-slate-400"><i class="ri-loader-4-line text-lg"></i></el-icon>
+                </div>
               </div>
 
               <!-- 底部 -->
-              <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
-                <span v-if="notificationCount > 5" class="text-xs text-slate-500">
-                  还有 {{ notificationCount - 5 }} 条通知
+              <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs text-slate-500">
+                  {{ Math.min(displayedCount, notificationCount) }} / {{ notificationCount }} 条
                 </span>
-                <span v-else class="text-xs text-slate-400">已显示全部通知</span>
+                <span v-if="!hasMoreNotifications && notificationCount > 0" class="text-xs text-slate-400">已显示全部</span>
               </div>
             </div>
           </template>
@@ -212,8 +225,14 @@ const emit = defineEmits(['toggle-sidebar'])
 const notificationCount = ref(0)
 const notificationList = ref([])
 const loading = ref(false)
+const loadingMore = ref(false)
 const isNotificationOpen = ref(false)
 const isSettingsOpen = ref(false)
+
+// 分页相关
+const currentPage = ref(1)
+const pageSize = 10
+const hasMoreNotifications = ref(false)
 
 // 已读通知ID集合（本地存储）
 const readNotificationIds = ref(new Set())
@@ -221,6 +240,16 @@ const readNotificationIds = ref(new Set())
 // 未读数量
 const unreadCount = computed(() => {
   return notificationList.value.filter(item => !readNotificationIds.value.has(item.id || item.content)).length
+})
+
+// 分页显示的通知列表
+const paginatedNotifications = computed(() => {
+  return notificationList.value.slice(0, currentPage.value * pageSize)
+})
+
+// 当前显示条数
+const displayedCount = computed(() => {
+  return paginatedNotifications.value.length
 })
 
 // 智能判断通知类型
@@ -250,6 +279,7 @@ const detectNotificationType = (item) => {
 // 获取通知列表
 const fetchNotifications = async () => {
   loading.value = true
+  currentPage.value = 1
   try {
     const response = await request.get('/dashboard/recent-activities')
     if (response.success) {
@@ -259,11 +289,37 @@ const fetchNotifications = async () => {
         type: detectNotificationType(item)
       }))
       notificationCount.value = notificationList.value.length
+      // 检查是否还有更多
+      hasMoreNotifications.value = notificationList.value.length > pageSize
     }
   } catch (error) {
     // 错误已在UI中提示，无需额外处理
   } finally {
     loading.value = false
+  }
+}
+
+// 加载更多通知
+const loadMoreNotifications = () => {
+  if (loadingMore.value) return
+  loadingMore.value = true
+
+  // 模拟加载延迟，实际项目中可能是API调用
+  setTimeout(() => {
+    currentPage.value++
+    const totalDisplayed = currentPage.value * pageSize
+    hasMoreNotifications.value = notificationCount.value > totalDisplayed
+    loadingMore.value = false
+  }, 300)
+}
+
+// 处理滚动加载
+const handleScroll = (e) => {
+  const target = e.target
+  const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+  // 滚动到底部附近时自动加载
+  if (scrollBottom < 20 && hasMoreNotifications.value && !loadingMore.value) {
+    loadMoreNotifications()
   }
 }
 
@@ -340,6 +396,55 @@ const isUnread = (item) => {
   return !readNotificationIds.value.has(id)
 }
 
+// 获取通知项样式类（未读/已读状态）
+const getNotificationItemClass = (item) => {
+  const unread = isUnread(item)
+  const baseClass = getNotificationClass(item.type).bgHover
+
+  if (unread) {
+    // 未读状态：保持原有悬停效果
+    return baseClass
+  } else {
+    // 已读状态：透明度降低
+    return 'opacity-60 hover:opacity-80'
+  }
+}
+
+// 获取通知标题样式
+const getNotificationTitleClass = (item) => {
+  const unread = isUnread(item)
+  const colorClass = getNotificationClass(item.type).titleColor
+
+  if (unread) {
+    return colorClass
+  } else {
+    return 'text-[#909399]'
+  }
+}
+
+// 获取通知内容样式
+const getNotificationContentClass = (item) => {
+  const unread = isUnread(item)
+
+  if (unread) {
+    return 'text-slate-600'
+  } else {
+    return 'text-[#909399]'
+  }
+}
+
+// 处理通知点击
+const handleNotificationClick = (item) => {
+  const id = item.id || item.content
+  if (!readNotificationIds.value.has(id)) {
+    readNotificationIds.value.add(id)
+    saveReadNotifications()
+  }
+
+  // 如果通知有跳转链接，可以在这里处理
+  // if (item.link) { router.push(item.link) }
+}
+
 // 跳转到系统配置
 const goToSystemConfig = () => {
   router.push('/config')
@@ -390,5 +495,57 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 样式已通过 Tailwind 类实现 */
+/* 通知列表样式 */
+.notification-list {
+  scroll-behavior: smooth;
+}
+
+/* 未读红点动画 - 消失时使用cubic-bezier */
+.unread-dot {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 通知项点击过渡 */
+.notification-item {
+  transition: all 300ms ease;
+}
+
+/* 已读通知的过渡效果 */
+.notification-item.reading {
+  animation: fadeToRead 300ms ease forwards;
+}
+
+@keyframes fadeToRead {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+/* 红点消失动画 */
+.notification-item.reading .unread-dot {
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* 支持prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .notification-list {
+    scroll-behavior: auto;
+  }
+
+  .notification-item,
+  .unread-dot {
+    transition: none;
+    animation: none;
+  }
+
+  .notification-item.reading .unread-dot {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
 </style>
