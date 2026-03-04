@@ -151,8 +151,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../store/auth'
 import { useReviewStore } from '../../store/review'
+import { useMenu } from '../../composables/useMenu'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { menuConfig, filterMenuByRole, findMenuItem as findMenuItemUtil, getRoleName } from '../../config/menuConfig'
+import { getRoleName } from '../../config/menuConfig'
 
 const props = defineProps({
   mobile: { type: Boolean, default: false },
@@ -164,6 +165,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const reviewStore = useReviewStore()
+const { menu, fetchMenu, findMenuItem } = useMenu()
 
 // 展开的菜单
 const expandedMenus = ref(['cost'])
@@ -173,15 +175,15 @@ const pendingCount = computed(() => reviewStore.pendingPagination.total)
 
 // 加载待审核数量
 const loadPendingCount = async () => {
-  const role = authStore.userRole
-  // 管理员、审核人员、业务员需要显示待审核数量
-  if (role === 'admin' || role === 'reviewer' || role === 'salesperson') {
+  // 检查是否有审核查看权限
+  if (authStore.hasPermission('review:view')) {
     await reviewStore.fetchPendingCount()
   }
 }
 
-// 组件挂载时加载待审核数量
+// 组件挂载时加载菜单和待审核数量
 onMounted(() => {
+  fetchMenu()
   loadPendingCount()
 })
 
@@ -196,8 +198,8 @@ watch(() => route.path, () => {
 const userName = computed(() => authStore.realName || authStore.username || '未知用户')
 const roleName = computed(() => getRoleName(authStore.userRole))
 
-// 根据权限过滤菜单
-const visibleMenuItems = computed(() => filterMenuByRole(menuConfig, authStore.userRole))
+// 使用后端返回的动态菜单
+const visibleMenuItems = menu
 
 // 切换折叠状态
 const toggleCollapse = () => {
