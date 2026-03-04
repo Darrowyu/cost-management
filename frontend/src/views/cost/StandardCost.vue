@@ -129,9 +129,9 @@
         <el-table-column label="操作" width="130" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewQuotation(row)" :disabled="!row.quotation_id" title="查看" />
-            <el-button v-if="!isAdminOrReviewer" :icon="CopyDocument" circle size="small" @click="copyStandardCost(row)" title="复制" />
-            <el-button v-if="isAdminOrReviewer" :icon="Clock" circle size="small" @click="showHistory(row)" title="历史" />
-            <el-button v-if="isAdminOrReviewer" :icon="Delete" circle size="small" class="delete-btn" @click="deleteStandardCost(row)" title="删除" />
+            <el-button v-if="!canManage" :icon="CopyDocument" circle size="small" @click="copyStandardCost(row)" title="复制" />
+            <el-button v-if="canManage" :icon="Clock" circle size="small" @click="showHistory(row)" title="历史" />
+            <el-button v-if="canManage" :icon="Delete" circle size="small" class="delete-btn" @click="deleteStandardCost(row)" title="删除" />
           </template>
         </el-table-column>
       </el-table>
@@ -150,7 +150,7 @@ import { Search, View, CopyDocument, Clock, Delete } from '@element-plus/icons-v
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
-import { getUser } from '@/utils/auth'
+import { useAuthStore } from '@/store/auth'
 import logger from '@/utils/logger'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -163,10 +163,8 @@ defineOptions({ name: 'StandardCost' })
 const router = useRouter()
 
 // 用户权限
-const user = getUser()
-const isAdminOrReviewer = computed(() => {
-  return user && (user.role === 'admin' || user.role === 'reviewer')
-})
+const authStore = useAuthStore()
+const canManage = computed(() => authStore.hasAnyPermission(['cost:manage', 'cost:edit']))
 
 // 格式化包装规格显示（根据二层或三层）
 const formatPackagingSpec = (row) => {

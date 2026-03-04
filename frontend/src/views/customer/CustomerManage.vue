@@ -95,6 +95,7 @@ import { Delete, Search, EditPen, CaretLeft, CaretRight } from '@element-plus/ic
 import request from '@/utils/request'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime, downloadBlob } from '@/utils/format'
+import logger from '@/utils/logger'
 import CostPageHeader from '@/components/cost/CostPageHeader.vue'
 import { usePagination } from '@/composables/usePagination'
 import CommonPagination from '@/components/common/CommonPagination.vue'
@@ -120,8 +121,8 @@ const formRules = {
   vc_code: [{ required: true, message: '请输入VC号', trigger: 'blur' }],
   name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }]
 }
-const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
-const canAssignSalesperson = computed(() => authStore.isAdmin)
+const canEdit = computed(() => authStore.hasPermission('master:customer:manage'))
+const canAssignSalesperson = computed(() => authStore.hasPermission('system:admin'))
 const salespersonList = ref([])
 
 const fetchSalespersons = async () => {

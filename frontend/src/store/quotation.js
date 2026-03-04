@@ -55,10 +55,10 @@ export const useQuotationStore = defineStore('quotation', {
     },
 
     // 判断成本分析是否可删除
-    canDelete: (state) => (quotation, userRole) => {
+    canDelete: (state) => (quotation, hasDeleteAllPermission) => {
       if (!quotation) return false
-      // 管理员可以删除任何状态的成本分析
-      if (userRole === 'admin') return true
+      // 有删除所有权限的可以删除任何状态的成本分析
+      if (hasDeleteAllPermission) return true
       // 普通用户只能删除草稿状态的成本分析
       return quotation.status === 'draft'
     }

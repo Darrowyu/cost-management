@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import logger from '@/utils/logger'
 import { useConfigStore } from '@/store/config'
-import { getUser } from '@/utils/auth'
+import { useAuthStore } from '@/store/auth'
 
 export function useQuotationDetail(quotationId) {
     const router = useRouter()
@@ -30,12 +30,13 @@ export function useQuotationDetail(quotationId) {
     })
 
     // Permissions
-    const user = getUser()
+    const authStore = useAuthStore()
     const isAdminOrReviewer = computed(() => {
-        return user && (user.role === 'admin' || user.role === 'reviewer')
+        return authStore.hasAnyPermission(['cost:manage', 'cost:edit', 'review:approve'])
     })
     const canEdit = computed(() => {
-        return quotation.value.status === 'draft' || quotation.value.status === 'rejected'
+        const canEditStatus = quotation.value.status === 'draft' || quotation.value.status === 'rejected'
+        return canEditStatus && authStore.hasPermission('cost:edit')
     })
 
     // Fetch Data

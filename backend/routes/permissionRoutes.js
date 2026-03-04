@@ -273,4 +273,133 @@ router.get('/my', verifyToken, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/permissions/menu
+ * 获取当前用户的菜单权限（动态菜单）
+ */
+router.get('/menu', verifyToken, async (req, res) => {
+  try {
+    const { role } = req.user;
+    const permissions = await getRolePermissionsFromDB(role);
+
+    // 根据权限码生成菜单配置
+    const menuConfig = buildMenuByPermissions(permissions, role);
+
+    res.json(success({ menu: menuConfig }));
+  } catch (err) {
+    logger.error('获取菜单权限失败:', err);
+    res.status(500).json(error('获取菜单权限失败'));
+  }
+});
+
+/**
+ * 根据权限码构建菜单
+ */
+function buildMenuByPermissions(permissions, role) {
+  const menu = [];
+
+  // 仪表盘 - 所有人可见
+  menu.push({
+    id: 'dashboard',
+    label: '仪表盘',
+    icon: 'ri-dashboard-3-line',
+    route: '/dashboard'
+  });
+
+  // 成本管理模块
+  const costChildren = [];
+  if (permissions.includes('cost:create')) {
+    costChildren.push({ id: 'cost_add', label: '新增成本分析', route: '/cost/add', icon: 'ri-add-circle-line' });
+    costChildren.push({ id: 'cost_estimation', label: '新产品预估', route: '/cost/add?mode=estimation', icon: 'ri-lightbulb-line' });
+  }
+  if (permissions.includes('cost:view')) {
+    costChildren.push({ id: 'cost_standard', label: '标准成本', route: '/cost/standard', icon: 'ri-bookmark-line' });
+    costChildren.push({ id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' });
+  }
+
+  if (costChildren.length > 0 && role !== 'purchaser' && role !== 'producer') {
+    menu.push({
+      id: 'cost',
+      label: '成本管理',
+      icon: 'ri-money-cny-box-line',
+      children: costChildren
+    });
+  }
+
+  // 审核管理模块
+  const reviewChildren = [];
+  if (permissions.includes('review:view')) {
+    reviewChildren.push({ id: 'review_pending', label: '待审核记录', route: '/review/pending', icon: 'ri-time-line' });
+    reviewChildren.push({ id: 'review_approved', label: '已审核记录', route: '/review/approved', icon: 'ri-check-double-line' });
+  }
+
+  if (reviewChildren.length > 0) {
+    menu.push({
+      id: 'review',
+      label: '审核管理',
+      icon: 'ri-checkbox-circle-line',
+      children: reviewChildren
+    });
+  }
+
+  // 基础数据模块
+  const masterItems = [];
+  if (permissions.includes('master:regulation:view')) {
+    masterItems.push({ id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations' });
+  }
+  if (permissions.includes('master:customer:view')) {
+    masterItems.push({ id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers' });
+  }
+  if (permissions.includes('master:material:view')) {
+    masterItems.push({ id: 'material_half_mask', label: '半面罩类', route: '/materials?type=half_mask', icon: 'ri-cpu-line' });
+    masterItems.push({ id: 'material_general', label: '口罩类', route: '/materials?type=general', icon: 'ri-file-list-2-line' });
+  }
+  if (permissions.includes('master:model:view')) {
+    masterItems.push({ id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line' });
+  }
+  if (permissions.includes('master:process:view')) {
+    masterItems.push({ id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' });
+  }
+  if (permissions.includes('master:packaging:view')) {
+    masterItems.push({ id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' });
+  }
+
+  if (masterItems.length > 0) {
+    menu.push({ type: 'divider', label: '基础数据' });
+    menu.push({
+      id: 'product',
+      label: '产品管理',
+      icon: 'ri-archive-2-line',
+      children: masterItems
+    });
+  }
+
+  // 系统管理模块
+  const systemItems = [];
+  if (permissions.includes('system:config:view')) {
+    systemItems.push({ id: 'config', label: '系统配置', icon: 'ri-equalizer-line', route: '/config' });
+  }
+  if (permissions.includes('system:permission:view')) {
+    systemItems.push({ id: 'permission', label: '权限管理', icon: 'ri-shield-keyhole-line', route: '/config/permissions' });
+  }
+  if (permissions.includes('system:user:view')) {
+    systemItems.push({ id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users' });
+  }
+
+  // 个人设置 - 非管理员可见
+  if (role !== 'admin') {
+    systemItems.push({ id: 'profile', label: '个人设置', icon: 'ri-user-line', route: '/profile' });
+  }
+
+  // 帮助中心 - 所有人可见
+  systemItems.push({ id: 'help', label: '帮助中心', icon: 'ri-book-open-line', route: '/help' });
+
+  if (systemItems.length > 0) {
+    menu.push({ type: 'divider', label: '系统管理' });
+    menu.push(...systemItems);
+  }
+
+  return menu;
+}
+
 module.exports = router;

@@ -68,11 +68,11 @@
             <el-button v-if="canReview" :icon="View" circle size="small" @click="handleReview(row)" title="审核" />
             <!-- 业务员只能查看 -->
             <el-button v-else :icon="View" circle size="small" @click="handleView(row)" title="查看" />
-            <el-button 
-              v-if="isAdmin" 
-              :icon="Delete" 
-              circle 
-              size="small" 
+            <el-button
+              v-if="canDeleteAll"
+              :icon="Delete"
+              circle
+              size="small"
               class="delete-btn"
               @click="handleDelete(row)"
               title="删除"
@@ -173,8 +173,8 @@ const currentQuotationId = ref(null)
 
 // 计算属性
 const loading = computed(() => reviewStore.loading)
-const isAdmin = computed(() => authStore.user?.role === 'admin')
-const canReview = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'reviewer')
+const canReview = computed(() => authStore.hasPermission('review:approve'))
+const canDeleteAll = computed(() => authStore.hasPermission('cost:delete:all'))
 
 // 从 store 获取 total
 const pendingTotal = computed(() => reviewStore.pendingPagination.total)
