@@ -259,6 +259,7 @@ const getHistoryActionLabel = (action: string) => {
     'create': '创建',
     'update': '更新',
     'delete': '删除',
+    'batch_update': '批量更新',
     'activate': '启用',
     'deactivate': '停用'
   }
