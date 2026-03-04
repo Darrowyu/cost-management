@@ -33,7 +33,6 @@ export const menuConfig = [
   { type: 'divider', label: '基础数据' },
 
   { id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
-  { id: 'model', label: '型号管理', icon: 'ri-price-tag-3-line', route: '/models', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
   { id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers', roles: ['admin', 'purchaser', 'salesperson'] },
   {
     id: 'material',
@@ -44,8 +43,16 @@ export const menuConfig = [
       { id: 'material_general', label: '口罩类', route: '/materials?type=general', icon: 'ri-file-list-2-line' }
     ]
   },
-  { id: 'packaging', label: '包材管理', icon: 'ri-box-3-line', route: '/packaging' },
-  { id: 'process', label: '工序管理', icon: 'ri-settings-4-line', route: '/processes' },
+  {
+    id: 'product',
+    label: '产品管理',
+    icon: 'ri-archive-2-line',
+    children: [
+      { id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line', roles: ['admin', 'salesperson', 'reviewer', 'purchaser', 'producer', 'readonly'] },
+      { id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' },
+      { id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' }
+    ]
+  },
 
   { type: 'divider', label: '系统管理' },
 
