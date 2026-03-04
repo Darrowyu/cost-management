@@ -1,13 +1,13 @@
 -- 016: 添加工序配置历史记录功能
 -- 扩展 process_configs 表并创建历史记录表
 
--- 1. 扩展 process_configs 表，添加审计字段
-ALTER TABLE process_configs
+-- 1. 扩展 packaging_configs 表，添加审计字段
+ALTER TABLE packaging_configs
   ADD COLUMN IF NOT EXISTS last_modified_by INTEGER REFERENCES users(id),
   ADD COLUMN IF NOT EXISTS last_process_total DECIMAL(12,4);
 
-COMMENT ON COLUMN process_configs.last_modified_by IS '最后修改人ID';
-COMMENT ON COLUMN process_configs.last_process_total IS '最后工序总价';
+COMMENT ON COLUMN packaging_configs.last_modified_by IS '最后修改人ID';
+COMMENT ON COLUMN packaging_configs.last_process_total IS '最后工序总价';
 
 -- 2. 创建工序配置历史记录表
 CREATE TABLE IF NOT EXISTS process_config_history (

@@ -10,14 +10,14 @@ async function verify() {
 
     console.log('=== 验证数据库迁移结果 ===\n');
 
-    // 检查 process_configs 表结构
+    // 检查 packaging_configs 表结构
     const columns = await dbManager.query(`
       SELECT column_name
       FROM information_schema.columns
-      WHERE table_name = 'process_configs'
+      WHERE table_name = 'packaging_configs'
       AND column_name IN ('last_modified_by', 'last_process_total')
     `);
-    console.log('✅ process_configs 新增字段:', columns.rows.map(r => r.column_name).join(', '));
+    console.log('✅ packaging_configs 新增字段:', columns.rows.map(r => r.column_name).join(', ') || '无');
 
     // 检查历史表
     const tables = await dbManager.query(`
