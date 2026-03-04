@@ -7,10 +7,11 @@
 const dbManager = require('../db/database');
 
 function parseJson(row) {
+  // pg 库会自动解析 JSONB 列，这里只需要处理可能的字符串情况
   return {
     ...row,
-    old_data: row.old_data ? JSON.parse(row.old_data) : null,
-    new_data: row.new_data ? JSON.parse(row.new_data) : null
+    old_data: typeof row.old_data === 'string' ? JSON.parse(row.old_data) : row.old_data,
+    new_data: typeof row.new_data === 'string' ? JSON.parse(row.new_data) : row.new_data
   };
 }
 
