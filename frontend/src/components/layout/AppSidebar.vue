@@ -240,9 +240,6 @@ const isSubmenuActive = (item) => {
   return item.children.some(sub => isActive(sub.id))
 }
 
-// 查找菜单项
-const findMenuItem = (menuId) => findMenuItemUtil(menuConfig, menuId)
-
 // 切换子菜单展开状态
 const toggleSubmenu = (menuId) => {
   const index = expandedMenus.value.indexOf(menuId)
