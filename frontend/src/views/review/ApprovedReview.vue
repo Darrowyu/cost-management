@@ -80,11 +80,11 @@
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="handleView(row)" title="查看" />
-            <el-button 
-              v-if="isAdmin" 
-              :icon="Delete" 
-              circle 
-              size="small" 
+            <el-button
+              v-if="canDeleteAll"
+              :icon="Delete"
+              circle
+              size="small"
               class="delete-btn"
               @click="handleDelete(row)"
               title="删除"
@@ -175,7 +175,7 @@ const currentQuotationId = ref(null)
 
 // 计算属性
 const loading = computed(() => reviewStore.loading)
-const isAdmin = computed(() => authStore.user?.role === 'admin')
+const canDeleteAll = computed(() => authStore.hasPermission('cost:delete:all'))
 
 // 清理批注内容（去除【退回原因】前缀）
 const cleanComment = (comment) => {

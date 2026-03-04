@@ -5,7 +5,7 @@
         <ActionButton type="compare" @click="goToCompare" :disabled="selectedQuotations.length < 2">
           对比模式 ({{ selectedQuotations.length }})
         </ActionButton>
-        <ActionButton v-if="!isRestrictedRole" type="add" @click="showCategoryModal">新增成本分析</ActionButton>
+        <ActionButton v-if="canCreate" type="add" @click="showCategoryModal">新增成本分析</ActionButton>
       </template>
     </CostPageHeader>
 
@@ -115,11 +115,11 @@
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="isRestrictedRole ? 100 : 160" fixed="right">
+        <el-table-column label="操作" :width="canCreate ? 160 : 100" fixed="right">
           <template #default="{ row }">
             <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" title="查看" />
             <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" title="编辑" />
-            <el-button v-if="!isRestrictedRole" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" title="复制" />
+            <el-button v-if="canCreate" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" title="复制" />
             <el-button v-if="canDelete(row)" :icon="Delete" circle size="small" class="delete-btn" @click="deleteQuotation(row.id)" title="删除" />
           </template>
         </el-table-column>
@@ -155,7 +155,7 @@
             <div class="flex gap-2" @click.stop>
               <el-button :icon="View" circle size="small" @click="viewDetail(row.id)" />
               <el-button v-if="canEdit(row)" :icon="EditPen" circle size="small" @click="editQuotation(row.id)" />
-              <el-button v-if="!isRestrictedRole" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" />
+              <el-button v-if="canCreate" :icon="CopyDocument" circle size="small" @click="copyQuotation(row.id)" />
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ import { Search, View, EditPen, CopyDocument, Delete } from '@element-plus/icons
 import request from '@/utils/request'
 import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatQuantity } from '@/utils/review'
-import { getUser } from '@/utils/auth'
+import { useAuthStore } from '@/store/auth'
 import ProductCategoryModal from '@/components/ProductCategoryModal.vue'
 import CommonPagination from '@/components/common/CommonPagination.vue'
 import ActionButton from '@/components/common/ActionButton.vue'
@@ -191,8 +191,9 @@ const router = useRouter()
 const categoryModalVisible = ref(false)
 
 // 用户权限
-const user = getUser()
-const isRestrictedRole = computed(() => ['admin', 'reviewer', 'readonly'].includes(user?.role))
+const authStore = useAuthStore()
+const canCreate = computed(() => authStore.hasPermission('cost:create'))
+const canDeleteAll = computed(() => authStore.hasPermission('cost:delete:all'))
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -317,16 +318,13 @@ const onCategoryConfirm = (category) => {
 
 // 判断是否可以编辑
 const canEdit = (row) => {
-  if (isRestrictedRole.value) return false
-  return row.status === 'draft' || row.status === 'rejected'
+  return (row.status === 'draft' || row.status === 'rejected') && authStore.hasPermission('cost:edit')
 }
 
 // 判断是否可以删除
 const canDelete = (row) => {
-  if (user && user.role === 'admin') {
-    return true
-  }
-  return row.status === 'draft'
+  if (canDeleteAll.value) return true
+  return row.status === 'draft' && authStore.hasPermission('cost:delete')
 }
 
 // 查看详情

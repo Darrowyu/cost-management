@@ -218,8 +218,10 @@ const reviewStore = useReviewStore()
 // 待审核数量
 const pendingCount = ref(0)
 
-// 是否管理员
-const isAdmin = computed(() => authStore.user?.role === 'admin')
+// 权限检查
+const isAdmin = computed(() => authStore.hasPermission?.('system:admin') ?? authStore.user?.role === 'admin')
+const canReview = computed(() => authStore.hasPermission('review:approve'))
+const canCreateCost = computed(() => authStore.hasPermission('cost:create'))
 
 // 最近操作记录（非管理员显示）
 const recentActivities = ref([])
@@ -280,19 +282,19 @@ const getStorageKey = () => {
   return `dashboard_quick_nav_${userId}`
 }
 
-// 所有可选的导航选项
+// 所有可选的导航选项 - 使用权限码控制
 const allNavOptions = [
-  { key: 'cost-add', label: '新增成本分析', icon: 'ri-add-line', iconBgColor: 'bg-blue-100', iconColor: 'text-primary-600', route: '/cost/add', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
-  { key: 'cost-standard', label: '标准成本', icon: 'ri-file-list-3-line', iconBgColor: 'bg-purple-100', iconColor: 'text-purple-600', route: '/cost/standard', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
-  { key: 'cost-records', label: '成本记录', icon: 'ri-history-line', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', route: '/cost/records', roles: ['admin', 'reviewer', 'salesperson', 'readonly'] },
-  { key: 'review-pending', label: '待审核', icon: 'ri-time-line', iconBgColor: 'bg-orange-100', iconColor: 'text-orange-600', route: '/review/pending', roles: ['admin', 'reviewer', 'salesperson'] },
-  { key: 'review-approved', label: '已审核', icon: 'ri-checkbox-circle-line', iconBgColor: 'bg-teal-100', iconColor: 'text-teal-600', route: '/review/approved', roles: ['admin', 'reviewer', 'salesperson'] },
-  { key: 'materials', label: '原料管理', icon: 'ri-database-2-line', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', route: '/materials' },
-  { key: 'packaging', label: '包材管理', icon: 'ri-box-3-line', iconBgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', route: '/packaging' },
-  { key: 'processes', label: '工序管理', icon: 'ri-settings-4-line', iconBgColor: 'bg-rose-100', iconColor: 'text-rose-600', route: '/processes' },
-  { key: 'models', label: '型号管理', icon: 'ri-layout-grid-line', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', route: '/models' },
-  { key: 'regulations', label: '法规管理', icon: 'ri-government-line', iconBgColor: 'bg-amber-100', iconColor: 'text-amber-600', route: '/regulations' },
-  { key: 'customers', label: '客户管理', icon: 'ri-user-3-line', iconBgColor: 'bg-lime-100', iconColor: 'text-lime-600', route: '/customers' }
+  { key: 'cost-add', label: '新增成本分析', icon: 'ri-add-line', iconBgColor: 'bg-blue-100', iconColor: 'text-primary-600', route: '/cost/add', permission: 'cost:create' },
+  { key: 'cost-standard', label: '标准成本', icon: 'ri-file-list-3-line', iconBgColor: 'bg-purple-100', iconColor: 'text-purple-600', route: '/cost/standard', permission: 'cost:view' },
+  { key: 'cost-records', label: '成本记录', icon: 'ri-history-line', iconBgColor: 'bg-green-100', iconColor: 'text-green-600', route: '/cost/records', permission: 'cost:view' },
+  { key: 'review-pending', label: '待审核', icon: 'ri-time-line', iconBgColor: 'bg-orange-100', iconColor: 'text-orange-600', route: '/review/pending', permission: 'review:view' },
+  { key: 'review-approved', label: '已审核', icon: 'ri-checkbox-circle-line', iconBgColor: 'bg-teal-100', iconColor: 'text-teal-600', route: '/review/approved', permission: 'review:view' },
+  { key: 'materials', label: '原料管理', icon: 'ri-database-2-line', iconBgColor: 'bg-indigo-100', iconColor: 'text-indigo-600', route: '/materials', permission: 'master:material:view' },
+  { key: 'packaging', label: '包材管理', icon: 'ri-box-3-line', iconBgColor: 'bg-cyan-100', iconColor: 'text-cyan-600', route: '/packaging', permission: 'master:packaging:view' },
+  { key: 'processes', label: '工序管理', icon: 'ri-settings-4-line', iconBgColor: 'bg-rose-100', iconColor: 'text-rose-600', route: '/processes', permission: 'master:process:view' },
+  { key: 'models', label: '型号管理', icon: 'ri-layout-grid-line', iconBgColor: 'bg-pink-100', iconColor: 'text-pink-600', route: '/models', permission: 'master:model:view' },
+  { key: 'regulations', label: '法规管理', icon: 'ri-government-line', iconBgColor: 'bg-amber-100', iconColor: 'text-amber-600', route: '/regulations', permission: 'master:regulation:view' },
+  { key: 'customers', label: '客户管理', icon: 'ri-user-3-line', iconBgColor: 'bg-lime-100', iconColor: 'text-lime-600', route: '/customers', permission: 'master:customer:view' }
 ]
 
 // 当前快捷导航列表
@@ -301,13 +303,12 @@ const quickNavList = ref([])
 // 弹窗显示状态
 const showNavSelector = ref(false)
 
-// 可添加的导航选项（排除已添加的，并根据角色过滤）
+// 可添加的导航选项（排除已添加的，并根据权限过滤）
 const availableNavOptions = computed(() => {
   const addedKeys = quickNavList.value.map(n => n.key)
-  const userRole = authStore.user?.role
   return allNavOptions.filter(opt => {
     if (addedKeys.includes(opt.key)) return false
-    if (opt.roles && !opt.roles.includes(userRole)) return false
+    if (opt.permission && !authStore.hasPermission(opt.permission)) return false
     return true
   })
 })
@@ -425,15 +426,13 @@ const loadDashboardData = async () => {
       }
     }
 
-    // 获取待审核数量（producer/purchaser/readonly角色不调用）
-    const userRole = authStore.user?.role
-    const excludedRoles = ['producer', 'purchaser', 'readonly']
-    if (!excludedRoles.includes(userRole)) {
+    // 获取待审核数量（有审核权限才调用）
+    if (authStore.hasPermission('review:view')) {
       pendingCount.value = await reviewStore.fetchPendingCount()
     }
 
     // 非管理员加载最近操作记录
-    if (userRole !== 'admin') {
+    if (!isAdmin.value) {
       await loadRecentActivities()
     }
   } catch (err) {

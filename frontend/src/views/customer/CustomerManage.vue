@@ -120,8 +120,8 @@ const formRules = {
   vc_code: [{ required: true, message: '请输入VC号', trigger: 'blur' }],
   name: [{ required: true, message: '请输入客户名称', trigger: 'blur' }]
 }
-const canEdit = computed(() => authStore.isAdmin || authStore.user?.role === 'reviewer')
-const canAssignSalesperson = computed(() => authStore.isAdmin)
+const canEdit = computed(() => authStore.hasPermission('master:customer:manage'))
+const canAssignSalesperson = computed(() => authStore.hasPermission('system:admin'))
 const salespersonList = ref([])
 
 const fetchSalespersons = async () => {
