@@ -105,10 +105,13 @@ class PackagingConfig {
               pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
               pc.factory,
               pc.is_active, pc.created_at, pc.updated_at,
-              m.model_name, m.model_category, r.name as regulation_name
+              pc.last_modified_by, pc.last_process_total,
+              m.model_name, m.model_category, r.name as regulation_name,
+              u.real_name as last_modified_by_name, u.username as last_modified_by_username
        FROM packaging_configs pc
        LEFT JOIN models m ON pc.model_id = m.id
        LEFT JOIN regulations r ON m.regulation_id = r.id
+       LEFT JOIN users u ON pc.last_modified_by = u.id
        WHERE pc.id = $1`,
       [id]
     );
@@ -339,8 +342,24 @@ class PackagingConfig {
    */
   static async findWithProcesses(id) {
     // 获取包装配置
-    const config = await this.findById(id);
-    if (!config) return null;
+    const configResult = await dbManager.query(
+      `SELECT pc.id, pc.model_id, pc.config_name, pc.packaging_type,
+              pc.layer1_qty, pc.layer2_qty, pc.layer3_qty,
+              pc.pc_per_bag, pc.bags_per_box, pc.boxes_per_carton,
+              pc.factory,
+              pc.is_active, pc.created_at, pc.updated_at,
+              pc.last_modified_by, pc.last_process_total,
+              m.model_name, m.model_category, r.name as regulation_name,
+              u.real_name as last_modified_by_name
+       FROM packaging_configs pc
+       LEFT JOIN models m ON pc.model_id = m.id
+       LEFT JOIN regulations r ON m.regulation_id = r.id
+       LEFT JOIN users u ON pc.last_modified_by = u.id
+       WHERE pc.id = $1`,
+      [id]
+    );
+    if (configResult.rows.length === 0) return null;
+    const config = configResult.rows[0];
 
     // 获取工序列表
     const processResult = await dbManager.query(
@@ -383,6 +402,25 @@ class PackagingConfig {
     config.materials = materialResult.rows;
 
     return config;
+  }
+
+  /**
+   * 更新最后修改信息
+   * @param {number} id - 配置 ID
+   * @param {Object} data - 更新数据
+   * @param {number} data.last_modified_by - 最后修改人 ID
+   * @param {number} data.last_process_total - 工序合计
+   * @returns {Promise<Object>} 更新结果 { rowCount }
+   */
+  static async updateLastModified(id, data) {
+    const { last_modified_by, last_process_total } = data;
+    const result = await dbManager.query(
+      `UPDATE packaging_configs
+       SET last_modified_by = $1, last_process_total = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [last_modified_by, last_process_total, id]
+    );
+    return { rowCount: result.rowCount };
   }
 }
 

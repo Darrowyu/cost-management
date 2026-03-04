@@ -7,6 +7,7 @@ const logger = require('../../utils/logger');
 const PackagingConfig = require('../../models/PackagingConfig');
 const ProcessConfig = require('../../models/ProcessConfig');
 const PackagingMaterial = require('../../models/PackagingMaterial');
+const ProcessConfigHistory = require('../../models/ProcessConfigHistory');
 const SystemConfig = require('../../models/SystemConfig');
 const StandardCost = require('../../models/StandardCost');
 const dbManager = require('../../db/database');
@@ -115,6 +116,7 @@ exports.getPackagingConfigFullDetail = async (req, res) => {
 // 创建包装配置
 exports.createPackagingConfig = async (req, res) => {
   try {
+    const userId = req.user?.id;
     const {
       model_id, config_name, packaging_type = 'standard_box',
       layer1_qty, layer2_qty, layer3_qty,
@@ -152,6 +154,26 @@ exports.createPackagingConfig = async (req, res) => {
       await PackagingMaterial.createBatch(configId, materials);
     }
 
+    // 计算工序总价
+    const processTotal = processes?.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0) || 0;
+
+    // 更新最后修改信息
+    await PackagingConfig.updateLastModified(configId, {
+      last_modified_by: userId,
+      last_process_total: processTotal
+    });
+
+    // 创建历史记录
+    if (userId) {
+      await ProcessConfigHistory.create({
+        packaging_config_id: configId,
+        action: 'create',
+        new_data: { processes: processes || [] },
+        new_process_total: processTotal,
+        operated_by: userId
+      });
+    }
+
     res.json({ success: true, data: { id: configId }, message: '包装配置创建成功' });
   } catch (error) {
     logger.error('创建包装配置失败:', error);
@@ -171,6 +193,7 @@ exports.createPackagingConfig = async (req, res) => {
 exports.updatePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
     const userRole = req.user?.role;
     const {
       config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty,
@@ -237,9 +260,38 @@ exports.updatePackagingConfig = async (req, res) => {
     }
 
     // 只有生产/管理员可修改工序
+    let oldProcesses = [];
+    let oldProcessTotal = 0;
     if (processes && canEditProcess) {
+      // 获取旧工序数据用于历史记录
+      const oldConfig = await PackagingConfig.findWithProcesses(id);
+      oldProcesses = oldConfig?.processes || [];
+      oldProcessTotal = oldProcesses.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
+
       await ProcessConfig.deleteByPackagingConfigId(id);
       if (processes.length > 0) await ProcessConfig.createBatch(id, processes);
+
+      // 计算新工序总价
+      const newProcessTotal = processes.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
+
+      // 更新最后修改信息
+      await PackagingConfig.updateLastModified(id, {
+        last_modified_by: userId,
+        last_process_total: newProcessTotal
+      });
+
+      // 创建历史记录
+      if (userId) {
+        await ProcessConfigHistory.create({
+          packaging_config_id: id,
+          action: 'batch_update',
+          old_data: { processes: oldProcesses },
+          new_data: { processes },
+          old_process_total: oldProcessTotal,
+          new_process_total: newProcessTotal,
+          operated_by: userId
+        });
+      }
     }
 
     // 只有采购/管理员可修改包材

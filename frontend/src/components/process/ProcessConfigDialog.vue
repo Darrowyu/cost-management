@@ -125,9 +125,18 @@
           <div class="price-summary">
              <div class="item">工序小计: ¥{{ formatNumber(formProcessSubtotal) }}</div>
              <div class="item total">
-               含系数 ({{ configStore.getProcessCoefficient() }}): 
+               含系数 ({{ configStore.getProcessCoefficient() }}):
                <span class="price">¥{{ formatNumber(formTotalProcessPrice) }}</span>
              </div>
+          </div>
+
+          <!-- Last Modified Info -->
+          <div v-if="isEdit && lastModifiedInfo" class="last-modified-info">
+            <el-icon class="info-icon"><Clock /></el-icon>
+            <span class="info-text">
+              最后修改：{{ lastModifiedInfo.operator_name || lastModifiedInfo.username || '未知用户' }} 于 {{ formatDateTime(lastModifiedInfo.operated_at) }}
+              <span class="info-price">上次总价：¥{{ formatNumber(lastModifiedInfo.new_process_total || 0) }}</span>
+            </span>
           </div>
         </div>
 
@@ -202,8 +211,9 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
+import { Delete, Clock } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { getLatestProcessConfigHistory } from '@/api/process'
 import { useConfigStore } from '@/store/config'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
 import PackagingSpecConfigurator from '@/components/packaging/PackagingSpecConfigurator.vue' // Import Shared Component
@@ -230,6 +240,7 @@ const copyLoading = ref(false)
 const copyConfigsLoading = ref(false)
 const allConfigsForCopy = ref([])
 const copySourcePreview = ref([])
+const lastModifiedInfo = ref(null)
 
 const defaultForm = {
   id: null,
@@ -278,8 +289,11 @@ watch(() => props.modelValue, (val) => {
         unit_price: Number(p.unit_price) || 0
       }))
       form.is_active = data.is_active ? 1 : 0
+      // 加载最后修改信息
+      loadLastModifiedInfo()
     } else {
       Object.assign(form, defaultForm)
+      lastModifiedInfo.value = null
       // If parent passed a model_id context (not implemented yet in prop, but good practice)
     }
   }
@@ -385,13 +399,13 @@ const handleCopySourceChange = async (id) => {
 
 const handleCopyProcesses = () => {
     if(!copySourcePreview.value.length) return
-    
+
     const newItems = copySourcePreview.value.map((p, idx) => ({
         process_name: p.process_name,
         unit_price: Number(p.unit_price) || 0,
         sort_order: idx
     }))
-    
+
     if(copyMode.value === 'replace') {
         form.processes = newItems
     } else {
@@ -402,6 +416,19 @@ const handleCopyProcesses = () => {
         ElMessage.success(`追加了 ${toAdd.length} 项工序`)
     }
     showProcessCopyDialog.value = false
+}
+
+// 加载最后修改信息
+const loadLastModifiedInfo = async () => {
+  if (!isEdit.value || !form.id) return
+  try {
+    const res = await getLatestProcessConfigHistory(form.id)
+    if (res.success && res.data) {
+      lastModifiedInfo.value = res.data
+    }
+  } catch (e) {
+    // 错误静默处理
+  }
 }
 </script>
 
@@ -530,5 +557,33 @@ const handleCopyProcesses = () => {
 .price-summary .price {
     font-size: 16px;
     color: #3b82f6;
+}
+
+/* Last Modified Info */
+.last-modified-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f0f9ff;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+}
+
+.last-modified-info .info-icon {
+    color: #3b82f6;
+    font-size: 14px;
+}
+
+.last-modified-info .info-text {
+    font-size: 13px;
+    color: #475569;
+}
+
+.last-modified-info .info-price {
+    margin-left: 12px;
+    color: #059669;
+    font-weight: 500;
 }
 </style>

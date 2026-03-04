@@ -142,19 +142,128 @@
         </el-table>
       </div>
 
+      <!-- 4. 历史时间线 (仅工序配置) -->
+      <div v-if="type === 'process'" class="history-section">
+        <div class="history-header" @click="showHistory = !showHistory">
+          <div class="history-title">
+            <el-icon class="history-icon"><Clock /></el-icon>
+            <span class="font-semibold text-slate-800">配置变更历史</span>
+            <el-tag size="small" type="info" class="ml-2">{{ historyList.length }}</el-tag>
+          </div>
+          <el-icon class="history-toggle-icon" :class="{ 'is-open': showHistory }">
+            <ArrowDown v-if="showHistory" />
+            <ArrowRight v-else />
+          </el-icon>
+        </div>
+
+        <div v-show="showHistory" class="history-content">
+          <el-timeline v-if="historyList.length > 0" class="custom-timeline">
+            <el-timeline-item
+              v-for="(item, index) in historyList"
+              :key="index"
+              :type="getHistoryItemType(item.action)"
+              :timestamp="formatDateTime(item.operated_at)"
+              placement="top"
+            >
+              <div class="history-item">
+                <div class="history-item-header">
+                  <span class="history-operator">{{ item.operator_name || '-' }}</span>
+                  <el-tag
+                    size="small"
+                    :type="getHistoryActionType(item.action)"
+                    class="history-action-tag"
+                  >
+                    {{ getHistoryActionLabel(item.action) }}
+                  </el-tag>
+                </div>
+                <div class="history-item-detail">
+                  <span class="detail-label">总价:</span>
+                  <span class="detail-value">¥{{ formatNumber(item.new_process_total || 0) }}</span>
+                  <span v-if="item.new_data?.processes" class="detail-label ml-3">工序数:</span>
+                  <span v-if="item.new_data?.processes" class="detail-value">{{ item.new_data.processes.length }}</span>
+                </div>
+                <div v-if="item.remark" class="history-remark">
+                  {{ item.remark }}
+                </div>
+              </div>
+            </el-timeline-item>
+          </el-timeline>
+
+          <el-empty v-else-if="!historyLoading" description="暂无历史记录" :image-size="60" />
+
+          <div v-if="historyLoading" class="history-loading">
+            <el-skeleton :rows="3" animated />
+          </div>
+        </div>
+      </div>
+
     </div>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { formatNumber } from '@/utils/format'
+import { ref, computed, watch } from 'vue'
+import { formatNumber, formatDateTime } from '@/utils/format'
 import { formatPackagingMethodFromConfig, calculateTotalFromConfig } from '@/config/packagingTypes'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useConfigStore } from '@/store/config'
-import { Box, Money, Operation } from '@element-plus/icons-vue'
+import { getProcessConfigHistory } from '@/api/process'
+import { Box, Money, Operation, Clock, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
 
 const configStore = useConfigStore()
+
+// 历史记录状态
+const historyList = ref([])
+const historyLoading = ref(false)
+const showHistory = ref(false)
+
+// 加载历史记录
+const loadHistory = async () => {
+  if (props.type !== 'process' || !props.config?.id) return
+  historyLoading.value = true
+  try {
+    const res = await getProcessConfigHistory(props.config.id)
+    historyList.value = res.data || []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// 获取时间线项类型
+const getHistoryItemType = (action: string) => {
+  const map: Record<string, string> = {
+    'create': 'primary',
+    'update': 'warning',
+    'delete': 'danger',
+    'activate': 'success',
+    'deactivate': 'info'
+  }
+  return map[action] || 'info'
+}
+
+// 获取操作标签类型
+const getHistoryActionType = (action: string) => {
+  const map: Record<string, string> = {
+    'create': 'success',
+    'update': 'warning',
+    'delete': 'danger',
+    'activate': 'primary',
+    'deactivate': 'info'
+  }
+  return map[action] || 'info'
+}
+
+// 获取操作标签文本
+const getHistoryActionLabel = (action: string) => {
+  const map: Record<string, string> = {
+    'create': '创建',
+    'update': '更新',
+    'delete': '删除',
+    'activate': '启用',
+    'deactivate': '停用'
+  }
+  return map[action] || action
+}
 
 // 管理配置接口
 interface ManagementConfig {
@@ -204,6 +313,13 @@ const emit = defineEmits(['update:modelValue'])
 const visible = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
+})
+
+// 监听对话框打开，加载历史记录
+watch(() => props.modelValue, (val) => {
+  if (val && props.type === 'process') {
+    loadHistory()
+  }
 })
 
 const getFactoryName = (factory: string) => {
@@ -372,6 +488,133 @@ const getSummaries = (param: SummaryMethodParam) => {
   font-size: 16px;
   font-weight: 600;
   color: #1E293B;
+}
+
+/* History Section */
+.history-section {
+  margin-top: 24px;
+  background: #FAFAFA;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.history-header:hover {
+  background-color: #F1F5F9;
+}
+
+.history-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-icon {
+  font-size: 18px;
+  color: #64748B;
+}
+
+.history-toggle-icon {
+  font-size: 16px;
+  color: #94A3B8;
+  transition: transform 0.2s;
+}
+
+.history-toggle-icon.is-open {
+  transform: rotate(0deg);
+}
+
+.history-content {
+  padding: 0 16px 16px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom Timeline */
+.custom-timeline {
+  padding-top: 8px;
+}
+
+.custom-timeline :deep(.el-timeline-item__node) {
+  width: 10px;
+  height: 10px;
+}
+
+.custom-timeline :deep(.el-timeline-item__timestamp) {
+  color: #94A3B8;
+  font-size: 12px;
+}
+
+.history-item {
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+}
+
+.history-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.history-operator {
+  font-weight: 600;
+  color: #1E293B;
+  font-size: 14px;
+}
+
+.history-action-tag {
+  font-size: 11px;
+}
+
+.history-item-detail {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.detail-label {
+  color: #94A3B8;
+  margin-right: 4px;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.history-remark {
+  font-size: 12px;
+  color: #64748B;
+  background: #F8FAFC;
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.history-loading {
+  padding: 16px;
 }
 </style>
 

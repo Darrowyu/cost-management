@@ -7,6 +7,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const processController = require('../controllers/processController');
+const processHistoryController = require('../controllers/process/processHistoryController');
 const { verifyToken } = require('../middleware/auth');
 const { checkRole } = require('../middleware/roleCheck');
 
@@ -71,5 +72,9 @@ router.get('/process-configs/template/download', checkRole('admin', 'producer'),
 router.post('/packaging-materials/import', upload.single('file'), checkRole('admin', 'purchaser'), processController.importPackagingMaterials);
 router.post('/packaging-materials/export/excel', checkRole('admin', 'purchaser'), processController.exportPackagingMaterials);
 router.get('/packaging-materials/template/download', checkRole('admin', 'purchaser'), processController.downloadPackagingMaterialTemplate);
+
+// 工序配置历史记录路由
+router.get('/packaging-configs/:id/history', verifyToken, processHistoryController.getHistoryByPackagingConfigId);
+router.get('/packaging-configs/:id/history/latest', verifyToken, processHistoryController.getLatestHistory);
 
 module.exports = router;
