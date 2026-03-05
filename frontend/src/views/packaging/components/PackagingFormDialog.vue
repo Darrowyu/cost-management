@@ -45,7 +45,7 @@
       <div class="mb-6">
         <div class="text-sm font-bold text-slate-700 mb-3 pl-1 border-l-4 border-blue-500">包装规格定义</div>
         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-           <PackagingSpecConfigurator :model-value="form" @update:model-value="$emit('update:form', $event)" />
+           <PackagingSpecConfigurator :model-value="form" @update:model-value="$emit('update:form', $event)" :disabled="isPackagingSpecDisabled" />
         </div>
       </div>
 
@@ -192,6 +192,7 @@ import { Plus, Delete, InfoFilled, CopyDocument } from '@element-plus/icons-vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue';
 import PackagingSpecConfigurator from '@/components/packaging/PackagingSpecConfigurator.vue';
 import { formatNumber } from '@/utils/format';
+import { useAuthStore } from '@/store/auth';
 
 const props = defineProps({
   visible: { type: Boolean, required: true },
@@ -206,6 +207,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:visible', 'update:form', 'add-material', 'remove-material', 'submit', 'open-copy-dialog']);
+
+const authStore = useAuthStore();
+
+// 采购员不能编辑包装规格（只能编辑包材）
+const isPackagingSpecDisabled = computed(() => authStore.isPurchaser);
 
 const visible = computed({
   get: () => props.visible,

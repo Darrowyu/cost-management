@@ -27,12 +27,13 @@
       <!-- Item 1 -->
       <div class="formula-item input-card">
          <div class="item-label">{{ currentPackagingTypeConfig.fieldLabels[0] }}</div>
-         <el-input-number 
-          v-model="modelValue.layer1_qty" 
-          :min="1" 
-          :controls="false" 
+         <el-input-number
+          v-model="modelValue.layer1_qty"
+          :min="1"
+          :controls="false"
           class="formula-input"
           placeholder="-"
+          :disabled="disabled"
         />
       </div>
 
@@ -42,12 +43,13 @@
       <!-- Item 2 -->
       <div class="formula-item input-card" v-if="currentPackagingTypeConfig.layers >= 2">
          <div class="item-label">{{ currentPackagingTypeConfig.fieldLabels[1] }}</div>
-         <el-input-number 
-          v-model="modelValue.layer2_qty" 
-          :min="1" 
-          :controls="false" 
+         <el-input-number
+          v-model="modelValue.layer2_qty"
+          :min="1"
+          :controls="false"
           class="formula-input"
           placeholder="-"
+          :disabled="disabled"
         />
       </div>
       
@@ -57,12 +59,13 @@
       <!-- Item 3 -->
       <div class="formula-item input-card" v-if="currentPackagingTypeConfig.layers >= 3">
          <div class="item-label">{{ currentPackagingTypeConfig.fieldLabels[2] }}</div>
-         <el-input-number 
-          v-model="modelValue.layer3_qty" 
-          :min="1" 
-          :controls="false" 
+         <el-input-number
+          v-model="modelValue.layer3_qty"
+          :min="1"
+          :controls="false"
           class="formula-input"
           placeholder="-"
+          :disabled="disabled"
         />
       </div>
 
@@ -90,6 +93,10 @@ const props = defineProps({
   modelValue: {
     type: Object,
     required: true
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 

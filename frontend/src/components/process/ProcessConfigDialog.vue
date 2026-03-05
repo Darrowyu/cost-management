@@ -22,7 +22,7 @@
             <el-col :span="8">
               <el-form-item label="产品型号" required>
                 <el-select
-                  v-model="formData.model_id"
+                  v-model="form.model_id"
                   placeholder="选择产品型号"
                   :disabled="isEdit"
                   filterable
@@ -69,7 +69,7 @@
         <!-- Section 2: Packaging Spec Configuration (Shared Component) -->
         <div class="highlight-section">
           <div class="section-title">包装规格定义</div>
-          <PackagingSpecConfigurator v-model="formData" />
+          <PackagingSpecConfigurator v-model="form" :disabled="isPackagingSpecDisabled" />
         </div>
 
         <!-- Section 3: 工序列表 -->
@@ -224,15 +224,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Clock, Check } from '@element-plus/icons-vue'
+import { ref, reactive, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Delete, Clock } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { getLatestProcessConfigHistory } from '@/api/process'
 import { useConfigStore } from '@/store/config'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
 import PackagingSpecConfigurator from '@/components/packaging/PackagingSpecConfigurator.vue' // Import Shared Component
 import { formatNumber, formatDateTime } from '@/utils/format'
+import { useAuthStore } from '@/store/auth'
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
@@ -242,6 +243,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'saved'])
 const configStore = useConfigStore()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const apiLoading = ref(false)
@@ -285,6 +287,9 @@ const formProcessSubtotal = computed(() => {
   return (formData.processes || []).reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
 })
 
+// 采购员不能编辑包装规格（只能编辑包材）
+const isPackagingSpecDisabled = computed(() => authStore.isPurchaser)
+
 const formTotalProcessPrice = computed(() => {
   const coefficient = configStore.getProcessCoefficient()
   return formProcessSubtotal.value * coefficient
@@ -304,21 +309,19 @@ watch(() => props.modelValue, (val) => {
     if (props.initialData) {
       // Deep copy to break reference
       const data = JSON.parse(JSON.stringify(props.initialData))
-      // Merge with defaultForm to ensure all fields exist
-      form.value = {
-        ...defaultForm,
-        ...data,
-        processes: (data.processes || []).map(p => ({
-          ...p,
-          unit_price: Number(p.unit_price) || 0
-        })),
-        is_active: data.is_active ? 1 : 0
-      }
+      Object.assign(form, data)
+      // Ensure numeric types
+      form.processes = (data.processes || []).map(p => ({
+        ...p,
+        unit_price: Number(p.unit_price) || 0
+      }))
+      form.is_active = data.is_active ? 1 : 0
       // 加载最后修改信息
       loadLastModifiedInfo()
     } else {
-      form.value = { ...defaultForm }
+      Object.assign(form, defaultForm)
       lastModifiedInfo.value = null
+      // If parent passed a model_id context (not implemented yet in prop, but good practice)
     }
   }
 })
@@ -396,19 +399,32 @@ const removeProcess = async (index) => {
 }
 
 const submitForm = async () => {
-    const data = form.value // 直接使用 form.value 进行验证
-    if (!data.model_id) return ElMessage.warning('请选择型号')
-    if (!data.config_name) return ElMessage.warning('请输入配置名称')
+    if (!form.model_id) return ElMessage.warning('请选择型号')
+    if (!form.config_name) return ElMessage.warning('请输入配置名称')
 
     // Validate Packaging Spec
-    if (!data.layer1_qty) return ElMessage.warning('请填写包装规格')
-    if (currentPackagingTypeConfig.value.layers >= 2 && !data.layer2_qty) return ElMessage.warning('请填写完整包装规格')
+    if (!form.layer1_qty) return ElMessage.warning('请填写包装规格')
+    if (currentPackagingTypeConfig.value.layers >= 2 && !form.layer2_qty) return ElMessage.warning('请填写完整包装规格')
 
     apiLoading.value = true
     try {
-        const payload = { ...data }
-        // Clean up unneeded layers
-        if (currentPackagingTypeConfig.value.layers < 3) payload.layer3_qty = null
+        // 根据权限组装提交数据
+        let payload
+        const hasMaterialManage = authStore.hasPermission('master:material:manage')
+        const hasProcessManage = authStore.hasPermission('master:process:manage')
+
+        if (hasMaterialManage && !hasProcessManage) {
+            // 只有原料管理权限：只提交包材和基本信息
+            payload = {
+                id: form.id,
+                materials: form.materials
+            }
+        } else {
+            // 有工序管理权限：提交完整数据
+            payload = { ...form }
+            // Clean up unneeded layers
+            if (currentPackagingTypeConfig.value.layers < 3) payload.layer3_qty = null
+        }
 
         let res
         if (isEdit.value) {
@@ -417,7 +433,7 @@ const submitForm = async () => {
             res = await request.post('/processes/packaging-configs', payload)
         }
 
-        if (res.success || (res && !res.error)) { // Check generic success
+        if (res.success || (res && !res.error)) {
              ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
              emit('saved')
              handleClose()
@@ -486,9 +502,9 @@ const handleCopyProcesses = () => {
 
 // 加载最后修改信息
 const loadLastModifiedInfo = async () => {
-  if (!isEdit.value || !formData.id) return
+  if (!isEdit.value || !form.id) return
   try {
-    const res = await getLatestProcessConfigHistory(formData.id)
+    const res = await getLatestProcessConfigHistory(form.id)
     if (res.success && res.data) {
       lastModifiedInfo.value = res.data
     }
@@ -543,7 +559,7 @@ const loadLastModifiedInfo = async () => {
   overflow: visible;
 }
 
-/* Process Table Styling */
+/* Process Table Styling - Single scrollbar */
 .process-table-container {
   border: 1px solid #ebeef5;
   border-bottom: none; /* Table has border */
