@@ -9,7 +9,7 @@ const path = require('path');
 const processController = require('../controllers/processController');
 const processHistoryController = require('../controllers/process/processHistoryController');
 const { verifyToken } = require('../middleware/auth');
-const { checkPermission } = require('../middleware/permissionCheck');
+const { checkPermission, checkAnyPermission } = require('../middleware/permissionCheck');
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -46,7 +46,7 @@ router.get('/packaging-configs/:id', processController.getPackagingConfigDetail)
 router.get('/packaging-configs/:id/full', processController.getPackagingConfigFullDetail);
 router.post('/packaging-configs', checkPermission('master:process:manage'), processController.createPackagingConfig);
 router.post('/packaging-configs/batch-delete', checkPermission('master:process:manage'), processController.batchDeletePackagingConfigs);
-router.put('/packaging-configs/:id', checkPermission('master:process:manage'), processController.updatePackagingConfig);
+router.put('/packaging-configs/:id', checkAnyPermission(['master:process:manage', 'master:material:manage']), processController.updatePackagingConfig);
 router.delete('/packaging-configs/:id', checkPermission('master:process:manage'), processController.deletePackagingConfig);
 
 // 工序配置路由

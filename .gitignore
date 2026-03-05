@@ -49,3 +49,6 @@ backend/uploads/
 
 # Worktrees
 .worktrees/
+
+# Task management
+.tasks/

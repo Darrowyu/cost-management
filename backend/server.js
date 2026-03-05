@@ -76,7 +76,7 @@ app.use(cors(corsOptions));
 // 请求限流配置 - 防止暴力破解和 DDoS
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 分钟窗口
-  max: process.env.RATE_LIMIT_MAX || 1000, // 每 IP 最多 1000 次请求 (Default increased from 200)
+  max: process.env.RATE_LIMIT_MAX || 10000, // 每 IP 最多 10000 次请求
   message: { success: false, message: '请求过于频繁，请稍后再试' },
   standardHeaders: true,
   legacyHeaders: false
@@ -86,7 +86,7 @@ app.use('/api/', apiLimiter);
 // 登录接口更严格的限流
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100, // 登录每 IP 每 15 分钟最多 100 次 (Increased from 10)
+  max: 500, // 登录每 IP 每 15 分钟最多 500 次
   message: { success: false, message: '登录尝试过于频繁，请 15 分钟后再试' }
 });
 app.use('/api/auth/login', authLimiter);
