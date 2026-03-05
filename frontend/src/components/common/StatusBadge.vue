@@ -21,8 +21,8 @@ const props = defineProps({
     required: true
   },
   value: {
-    type: [String, Number],
-    required: true
+    type: [String, Number, Boolean, null],
+    default: ''
   },
   showDot: {
     type: Boolean,

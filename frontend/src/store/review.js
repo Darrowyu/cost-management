@@ -290,6 +290,10 @@ export const useReviewStore = defineStore('review', {
         }
         return response.total || 0
       } catch (error) {
+        // 忽略请求取消错误（组件卸载时正常发生）
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          return 0
+        }
         logger.error('获取待审核数量失败:', error)
         return 0
       }

@@ -152,7 +152,8 @@ request.interceptors.response.use(
           }
           break
         case 403:
-          ElMessage.error('您没有权限执行此操作')
+          // 直接使用后端返回的错误信息（已包含具体权限码）
+          ElMessage.error(data?.message || '您没有权限执行此操作')
           break
         case 404:
           ElMessage.error('请求的接口不存在(404)，请检查后端服务是否正常启动')

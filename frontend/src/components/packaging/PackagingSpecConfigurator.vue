@@ -1,8 +1,8 @@
 <template>
   <div class="packaging-spec-configurator">
-    <el-row :gutter="24" class="mb-4">
+    <el-row :gutter="16" class="mb-2">
       <el-col :span="24">
-        <el-form-item label="包装类型" class="mb-5">
+        <el-form-item label="包装类型" class="mb-3">
           <div class="packaging-type-grid">
             <div 
               v-for="type in packagingTypes" 
@@ -138,21 +138,21 @@ const setPackagingType = (type) => {
 .packaging-type-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 
 .type-card {
   border: 1px solid #dcdfe6;
   border-radius: 6px;
-  padding: 12px;
+  padding: 8px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
-  align-items: center; /* Center Vertically */
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   background: #fff;
-  height: 48px; /* Fixed height for consistency */
+  height: 40px;
 }
 
 .type-card:hover {
@@ -196,11 +196,14 @@ const setPackagingType = (type) => {
 }
 
 .type-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #334155;
   transition: color 0.2s;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .type-card.active .type-name {
@@ -213,17 +216,19 @@ const setPackagingType = (type) => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  padding-top: 8px;
+  gap: 6px;
+  padding-top: 4px;
+  flex-wrap: wrap;
 }
 
 .formula-item {
   flex: 1;
+  min-width: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 84px;
+  height: 72px;
 }
 
 .input-card {
@@ -243,15 +248,16 @@ const setPackagingType = (type) => {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  min-width: 140px;
+  min-width: 100px;
+  flex: 0 0 auto;
 }
 
 .formula-operator {
-  font-size: 20px;
+  font-size: 18px;
   color: #94a3b8;
   font-weight: 400;
   user-select: none;
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
 .item-label {
@@ -273,27 +279,27 @@ const setPackagingType = (type) => {
 
 .formula-input :deep(.el-input__inner) {
   text-align: center;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: #1e293b;
-  height: 36px;
-  line-height: 36px;
+  height: 32px;
+  line-height: 32px;
 }
 
 /* Result Styles */
 .result-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: #3b82f6;
   line-height: 1;
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 8px;
 }
 
 .result-unit {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: #94a3b8;
 }

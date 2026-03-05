@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const standardCostController = require('../controllers/review/standardCostController');
 const { verifyToken } = require('../middleware/auth');
-const { isAdminOrReviewer } = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissionCheck');
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -18,15 +18,15 @@ router.get('/', standardCostController.getAllStandardCosts);
 router.get('/:id', standardCostController.getStandardCostById);
 
 // 获取标准成本历史版本（仅管理员/审核人可访问）
-router.get('/:id/history', isAdminOrReviewer, standardCostController.getStandardCostHistory);
+router.get('/:id/history', checkPermission('cost:view'), standardCostController.getStandardCostHistory);
 
 // 设置标准成本（仅管理员/审核人可访问）
-router.post('/', isAdminOrReviewer, standardCostController.createStandardCost);
+router.post('/', checkPermission('cost:manage'), standardCostController.createStandardCost);
 
 // 恢复历史版本（仅管理员/审核人可访问）
-router.post('/:id/restore/:version', isAdminOrReviewer, standardCostController.restoreStandardCost);
+router.post('/:id/restore/:version', checkPermission('cost:manage'), standardCostController.restoreStandardCost);
 
 // 删除标准成本（仅管理员/审核人可访问）
-router.delete('/:packaging_config_id', isAdminOrReviewer, standardCostController.deleteStandardCost);
+router.delete('/:packaging_config_id', checkPermission('cost:manage'), standardCostController.deleteStandardCost);
 
 module.exports = router;

@@ -3,21 +3,23 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const customerController = require('../controllers/master/customerController');
-const { verifyToken, requireRole } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
+const { checkPermission } = require('../middleware/permissionCheck');
 
 router.use(verifyToken);
 
-router.get('/', customerController.getCustomerList);
-router.get('/search', customerController.searchCustomers);
-router.get('/template/download', requireRole(['admin', 'reviewer']), customerController.downloadTemplate);
-router.get('/:id', customerController.getCustomerById);
+// 查看权限
+router.get('/', checkPermission('master:customer:view'), customerController.getCustomerList);
+router.get('/search', checkPermission('master:customer:view'), customerController.searchCustomers);
+router.get('/:id', checkPermission('master:customer:view'), customerController.getCustomerById);
+router.post('/export/excel', checkPermission('master:customer:view'), customerController.exportCustomers);
 
-router.post('/', requireRole(['admin', 'reviewer']), customerController.createCustomer);
-router.post('/import', requireRole(['admin', 'reviewer']), upload.single('file'), customerController.importCustomers);
-router.post('/export/excel', requireRole(['admin', 'reviewer']), customerController.exportCustomers);
-router.post('/batch-delete', requireRole(['admin', 'reviewer']), customerController.batchDeleteCustomers);
-
-router.put('/:id', requireRole(['admin', 'reviewer']), customerController.updateCustomer);
-router.delete('/:id', requireRole(['admin', 'reviewer']), customerController.deleteCustomer); // 与 batch-delete 权限一致
+// 管理权限
+router.get('/template/download', checkPermission('master:customer:manage'), customerController.downloadTemplate);
+router.post('/', checkPermission('master:customer:manage'), customerController.createCustomer);
+router.post('/import', checkPermission('master:customer:manage'), upload.single('file'), customerController.importCustomers);
+router.post('/batch-delete', checkPermission('master:customer:manage'), customerController.batchDeleteCustomers);
+router.put('/:id', checkPermission('master:customer:manage'), customerController.updateCustomer);
+router.delete('/:id', checkPermission('master:customer:manage'), customerController.deleteCustomer);
 
 module.exports = router;

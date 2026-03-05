@@ -187,6 +187,14 @@ onMounted(() => {
   loadPendingCount()
 })
 
+// 监听用户变化（重新登录后），刷新菜单和权限
+watch(() => authStore.user?.id, (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    fetchMenu()
+    loadPendingCount()
+  }
+})
+
 // 监听路由变化，刷新待审核数量
 watch(() => route.path, () => {
   if (route.path.includes('/review')) {

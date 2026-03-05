@@ -10,71 +10,11 @@ const { success, error } = require('../utils/response');
 const { ROLE_NAMES } = require('../config/rolePermissions');
 const dbManager = require('../db/database');
 const logger = require('../utils/logger');
-
-// 权限缓存
-let permissionsCache = null;
-let rolePermissionsCache = {};
-let cacheTimestamp = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
-
-// 获取权限定义（带缓存）
-async function getPermissions() {
-  const now = Date.now();
-  if (permissionsCache && cacheTimestamp && (now - cacheTimestamp < CACHE_TTL)) {
-    return permissionsCache;
-  }
-
-  const result = await dbManager.query('SELECT * FROM permissions ORDER BY module, code');
-  const permissions = {};
-  const modules = {};
-
-  result.rows.forEach(row => {
-    permissions[row.code] = {
-      label: row.label,
-      module: row.module,
-      description: row.description
-    };
-
-    if (!modules[row.module]) {
-      modules[row.module] = {
-        label: getModuleLabel(row.module),
-        icon: getModuleIcon(row.module)
-      };
-    }
-  });
-
-  permissionsCache = { permissions, modules };
-  cacheTimestamp = now;
-  return permissionsCache;
-}
-
-// 获取角色权限（带缓存）
-async function getRolePermissionsFromDB(roleCode) {
-  if (roleCode === 'admin') {
-    const { permissions } = await getPermissions();
-    return Object.keys(permissions);
-  }
-
-  const now = Date.now();
-  if (rolePermissionsCache[roleCode] && cacheTimestamp && (now - cacheTimestamp < CACHE_TTL)) {
-    return rolePermissionsCache[roleCode];
-  }
-
-  const result = await dbManager.query(
-    'SELECT permission_code FROM role_permissions WHERE role_code = $1',
-    [roleCode]
-  );
-
-  const permissions = result.rows.map(r => r.permission_code);
-  rolePermissionsCache[roleCode] = permissions;
-  return permissions;
-}
+const { getPermissions, getRolePermissionsFromDB, clearPermissionsCache } = require('../utils/permissions');
 
 // 清除缓存
 function clearCache() {
-  permissionsCache = null;
-  rolePermissionsCache = {};
-  cacheTimestamp = null;
+  clearPermissionsCache();
 }
 
 // 获取模块标签
@@ -279,7 +219,7 @@ router.get('/my', verifyToken, async (req, res) => {
  */
 router.get('/menu', verifyToken, async (req, res) => {
   try {
-    const { role } = req.user;
+    const { role, username } = req.user;
     const permissions = await getRolePermissionsFromDB(role);
 
     // 根据权限码生成菜单配置
@@ -308,16 +248,18 @@ function buildMenuByPermissions(permissions, role) {
 
   // 成本管理模块
   const costChildren = [];
-  if (permissions.includes('cost:create')) {
+  // 检查是否有成本相关权限（view 或 manage 都显示）
+  const hasCostPermission = permissions.some(p => p.startsWith('cost:'));
+  if (hasCostPermission && permissions.includes('cost:create')) {
     costChildren.push({ id: 'cost_add', label: '新增成本分析', route: '/cost/add', icon: 'ri-add-circle-line' });
     costChildren.push({ id: 'cost_estimation', label: '新产品预估', route: '/cost/add?mode=estimation', icon: 'ri-lightbulb-line' });
   }
-  if (permissions.includes('cost:view')) {
+  if (hasCostPermission && (permissions.includes('cost:view') || permissions.includes('cost:manage'))) {
     costChildren.push({ id: 'cost_standard', label: '标准成本', route: '/cost/standard', icon: 'ri-bookmark-line' });
     costChildren.push({ id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' });
   }
 
-  if (costChildren.length > 0 && role !== 'purchaser' && role !== 'producer') {
+  if (costChildren.length > 0) {
     menu.push({
       id: 'cost',
       label: '成本管理',
@@ -328,7 +270,7 @@ function buildMenuByPermissions(permissions, role) {
 
   // 审核管理模块
   const reviewChildren = [];
-  if (permissions.includes('review:view')) {
+  if (permissions.includes('review:view') || permissions.includes('review:approve')) {
     reviewChildren.push({ id: 'review_pending', label: '待审核记录', route: '/review/pending', icon: 'ri-time-line' });
     reviewChildren.push({ id: 'review_approved', label: '已审核记录', route: '/review/approved', icon: 'ri-check-double-line' });
   }
@@ -344,13 +286,13 @@ function buildMenuByPermissions(permissions, role) {
 
   // 基础数据模块 - 独立菜单项
   const masterItems = [];
-  if (permissions.includes('master:regulation:view')) {
+  if (permissions.includes('master:regulation:view') || permissions.includes('master:regulation:manage')) {
     masterItems.push({ id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations' });
   }
-  if (permissions.includes('master:customer:view')) {
+  if (permissions.includes('master:customer:view') || permissions.includes('master:customer:manage')) {
     masterItems.push({ id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers' });
   }
-  if (permissions.includes('master:material:view')) {
+  if (permissions.includes('master:material:view') || permissions.includes('master:material:manage')) {
     masterItems.push({
       id: 'material',
       label: '原料管理',
@@ -369,13 +311,13 @@ function buildMenuByPermissions(permissions, role) {
 
   // 产品管理 - 仅包含型号、工序、包材
   const productItems = [];
-  if (permissions.includes('master:model:view')) {
+  if (permissions.includes('master:model:view') || permissions.includes('master:model:manage')) {
     productItems.push({ id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line' });
   }
-  if (permissions.includes('master:process:view')) {
+  if (permissions.includes('master:process:view') || permissions.includes('master:process:manage')) {
     productItems.push({ id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' });
   }
-  if (permissions.includes('master:packaging:view')) {
+  if (permissions.includes('master:packaging:view') || permissions.includes('master:packaging:manage')) {
     productItems.push({ id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' });
   }
 
@@ -390,13 +332,14 @@ function buildMenuByPermissions(permissions, role) {
 
   // 系统管理模块
   const systemItems = [];
-  if (permissions.includes('system:config:view')) {
+  // 有查看或管理配置权限都显示系统配置菜单
+  if (permissions.includes('system:config:view') || permissions.includes('system:config:manage')) {
     systemItems.push({ id: 'config', label: '系统配置', icon: 'ri-equalizer-line', route: '/config' });
   }
-  if (permissions.includes('system:permission:view')) {
+  if (permissions.includes('system:permission:view') || permissions.includes('system:permission:manage')) {
     systemItems.push({ id: 'permission', label: '权限管理', icon: 'ri-shield-keyhole-line', route: '/config/permissions' });
   }
-  if (permissions.includes('system:user:view')) {
+  if (permissions.includes('system:user:view') || permissions.includes('system:user:manage')) {
     systemItems.push({ id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users' });
   }
 

@@ -54,7 +54,39 @@ const PERMISSIONS = {
 
   // 系统管理模块 - 权限
   'system:permission:view': { label: '查看权限', module: 'system', description: '查看权限配置' },
-  'system:permission:manage': { label: '管理权限', module: 'system', description: '修改权限配置' }
+  'system:permission:manage': { label: '管理权限', module: 'system', description: '修改权限配置' },
+
+  // 补充缺失的权限定义
+  'system:admin': {
+    label: '系统管理员',
+    module: 'system',
+    description: '系统最高管理权限，拥有所有功能访问权'
+  },
+  'cost:delete:all': {
+    label: '删除所有成本分析',
+    module: 'cost',
+    description: '可删除任意状态的成本分析记录（草稿/已提交/已审核）'
+  },
+  'cost:manage': {
+    label: '成本管理高级权限',
+    module: 'cost',
+    description: '标准成本管理等高级成本功能'
+  },
+  'master:regulation:manage': {
+    label: '管理法规',
+    module: 'master',
+    description: '增删改法规数据'
+  },
+  'master:model:manage': {
+    label: '管理型号',
+    module: 'master',
+    description: '增删改型号数据'
+  },
+  'master:bom:manage': {
+    label: '管理BOM',
+    module: 'master',
+    description: '编辑产品BOM'
+  }
 };
 
 // 权限模块分组

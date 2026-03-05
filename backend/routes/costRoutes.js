@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const { checkRole } = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissionCheck');
 const costController = require('../controllers/costController');
 
 // 所有路由都需要认证
@@ -18,35 +18,35 @@ router.use(verifyToken);
 
 // 获取报价单列表
 // 权限：管理员、审核人、业务员、只读（业务员只能看自己的，只读可查看所有）
-router.get('/quotations', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.getQuotationList);
+router.get('/quotations', checkPermission('cost:view'), costController.getQuotationList);
 
 // 获取报价单详情
 // 权限：管理员、审核人、业务员、只读（业务员只能看自己的或标准成本关联的）
-router.get('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.getQuotationDetail);
+router.get('/quotations/:id', checkPermission('cost:view'), costController.getQuotationDetail);
 
 // 创建报价单
 // 权限：业务员、管理员、审核人
 router.post(
   '/quotations',
-  checkRole('salesperson', 'admin', 'reviewer'),
+  checkPermission('cost:create'),
   costController.createQuotation
 );
 
 // 更新报价单
 // 权限：管理员、审核人、业务员（创建者）
-router.put('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson'), costController.updateQuotation);
+router.put('/quotations/:id', checkPermission('cost:edit'), costController.updateQuotation);
 
 // 删除报价单
 // 权限：管理员、审核人、业务员（创建者）
-router.delete('/quotations/:id', checkRole('admin', 'reviewer', 'salesperson'), costController.deleteQuotation);
+router.delete('/quotations/:id', checkPermission('cost:delete'), costController.deleteQuotation);
 
 // 提交报价单
 // 权限：管理员、审核人、业务员（创建者）
-router.post('/quotations/:id/submit', checkRole('admin', 'reviewer', 'salesperson'), costController.submitQuotation);
+router.post('/quotations/:id/submit', checkPermission('cost:submit'), costController.submitQuotation);
 
 // 导出报价单
 // 权限：管理员、审核人、业务员、只读
-router.post('/quotations/:id/export', checkRole('admin', 'reviewer', 'salesperson', 'readonly'), costController.exportQuotation);
+router.post('/quotations/:id/export', checkPermission('cost:view'), costController.exportQuotation);
 
 /**
  * 辅助功能路由

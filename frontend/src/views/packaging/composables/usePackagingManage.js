@@ -10,9 +10,9 @@ export function usePackagingManage() {
   const authStore = useAuthStore();
   const showToolbar = ref(false);
 
-  // 权限检查 - 配置需要 admin/producer/purchaser，包材需要 admin/purchaser
-  const canEditConfig = computed(() => authStore.isAdmin || authStore.isProducer || authStore.isPurchaser);
-  const canEditMaterial = computed(() => authStore.isAdmin || authStore.isPurchaser);
+  // 权限检查 - 配置需要 工序管理权限，包材需要 原料管理权限
+  const canEditConfig = computed(() => authStore.hasPermission('master:process:manage'));
+  const canEditMaterial = computed(() => authStore.hasPermission('master:material:manage'));
 
   // 包装类型选项
   const packagingTypeOptions = getPackagingTypeOptions();
@@ -425,15 +425,16 @@ export function usePackagingManage() {
 
   // 提交表单
   const submitForm = async () => {
-    // 获取当前用户角色
-    const isPurchaser = authStore.isPurchaser;
+    // 获取当前用户权限
+    const hasMaterialManage = authStore.hasPermission('master:material:manage');
+    const hasProcessManage = authStore.hasPermission('master:process:manage');
 
-    // 验证必填字段（非采购需要验证）
+    // 验证必填字段（有工序管理权限的需要验证）
     if (!form.model_id) {
       ElMessage.warning('请选择型号');
       return;
     }
-    if (!isPurchaser && !form.config_name) {
+    if (hasProcessManage && !form.config_name) {
       ElMessage.warning('请输入配置名称');
       return;
     }
@@ -444,27 +445,27 @@ export function usePackagingManage() {
     const l2 = form.layer2_qty ?? form.bags_per_box;
     const l3 = form.layer3_qty ?? form.boxes_per_carton;
 
-    // 非采购需要验证包装规格
-    if (!isPurchaser && (!l1 || !l2)) {
+    // 有工序管理权限的需要验证包装规格
+    if (hasProcessManage && (!l1 || !l2)) {
       ElMessage.warning('请填写完整的包装方式');
       return;
     }
-    if (!isPurchaser && typeConfig && typeConfig.layers === 3 && !l3) {
+    if (hasProcessManage && typeConfig && typeConfig.layers === 3 && !l3) {
       ElMessage.warning('请填写完整的包装方式');
       return;
     }
 
     loading.value = true;
     try {
-      // 根据角色组装提交数据
+      // 根据权限组装提交数据
       let data;
-      if (isPurchaser) {
-        // 采购只能提交包材
+      if (hasMaterialManage && !hasProcessManage) {
+        // 只有原料管理权限只能提交包材
         data = {
           materials: form.materials
         };
       } else {
-        // 生产/管理员提交完整数据
+        // 有工序管理权限的提交完整数据
         data = {
           model_id: form.model_id,
           config_name: form.config_name,

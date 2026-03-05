@@ -54,11 +54,11 @@
             size="default"
             class="sortable-radio-group"
           >
-            <el-radio-button label="" class="static-tab">全部</el-radio-button>
-            <el-radio-button 
-              v-for="(sub, index) in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)" 
-              :key="sub" 
-              :label="sub"
+            <el-radio-button value="" class="static-tab">全部</el-radio-button>
+            <el-radio-button
+              v-for="(sub, index) in (currentType === 'half_mask' ? categoryStructure.half_mask : categoryStructure.general)"
+              :key="sub"
+              :value="sub"
               draggable="true"
               @dragstart="handleDragStart($event, index)"
               @dragover.prevent
@@ -243,7 +243,7 @@ const formatDate = (val) => val ? dayjs(val).format('YYYY-MM-DD') : '-'
 
 // 计算属性
 const isHalfMaskView = computed(() => currentType.value === 'half_mask')
-const canEdit = computed(() => authStore.isAdmin || authStore.isPurchaser)
+const canEdit = computed(() => authStore.hasPermission('master:material:manage'))
 const currentTitle = computed(() => {
   if (currentType.value === 'half_mask') return '原料管理 - 半面罩类'
   if (currentType.value === 'general') return '原料管理 - 口罩类(通用)'

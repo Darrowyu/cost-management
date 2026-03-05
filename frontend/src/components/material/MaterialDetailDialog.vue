@@ -24,8 +24,8 @@
             <el-col :span="12">
               <el-form-item label="原料类型" prop="material_type">
                 <el-radio-group v-model="form.material_type" @change="handleTypeChange" class="modern-radio w-full">
-                  <el-radio label="general" border class="flex-1 mr-0 text-center">口罩</el-radio>
-                  <el-radio label="half_mask" border class="flex-1 mr-0 text-center">半面罩</el-radio>
+                  <el-radio value="general" border class="flex-1 mr-0 text-center">口罩</el-radio>
+                  <el-radio value="half_mask" border class="flex-1 mr-0 text-center">半面罩</el-radio>
                 </el-radio-group>
               </el-form-item>
             </el-col>

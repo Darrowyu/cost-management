@@ -51,8 +51,8 @@
       <div class="cost-form-row">
         <el-form-item label="是否新客户" class="cost-form-item">
           <el-radio-group v-model="localIsNewCustomer" @change="onCustomerTypeChange">
-            <el-radio :label="true">是</el-radio>
-            <el-radio :label="false">否</el-radio>
+            <el-radio :value="true">是</el-radio>
+            <el-radio :value="false">否</el-radio>
           </el-radio-group>
         </el-form-item>
       </div>

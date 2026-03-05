@@ -33,27 +33,32 @@ const routes = [
       {
         path: 'regulations',
         name: 'RegulationManage',
-        component: () => import('../views/regulation/RegulationManage.vue')
+        component: () => import('../views/regulation/RegulationManage.vue'),
+        meta: { requiresPermission: 'master:regulation:view' }
       },
       {
         path: 'models',
         name: 'ModelManage',
-        component: () => import('../views/model/ModelManage.vue')
+        component: () => import('../views/model/ModelManage.vue'),
+        meta: { requiresPermission: 'master:model:view' }
       },
       {
         path: 'materials',
         name: 'MaterialManage',
-        component: () => import('../views/material/MaterialManage.vue')
+        component: () => import('../views/material/MaterialManage.vue'),
+        meta: { requiresPermission: 'master:material:view' }
       },
       {
         path: 'processes',
         name: 'ProcessManage',
-        component: () => import('../views/process/ProcessManage.vue')
+        component: () => import('../views/process/ProcessManage.vue'),
+        meta: { requiresPermission: 'master:process:view' }
       },
       {
         path: 'packaging',
         name: 'PackagingManage',
-        component: () => import('../views/packaging/PackagingManage.vue')
+        component: () => import('../views/packaging/PackagingManage.vue'),
+        meta: { requiresPermission: 'master:packaging:view' }
       },
       {
         path: 'users',
@@ -64,7 +69,8 @@ const routes = [
       {
         path: 'config',
         name: 'SystemConfig',
-        component: () => import('../views/config/SystemConfig.vue')
+        component: () => import('../views/config/SystemConfig.vue'),
+        meta: { requiresPermission: 'system:config:view' }
       },
       {
         path: 'config/permissions',
@@ -129,7 +135,8 @@ const routes = [
       {
         path: 'customers',
         name: 'CustomerManage',
-        component: () => import('../views/customer/CustomerManage.vue')
+        component: () => import('../views/customer/CustomerManage.vue'),
+        meta: { requiresPermission: 'master:customer:view' }
       },
       {
         path: 'help/:pathMatch(.*)*',
@@ -218,6 +225,9 @@ router.beforeEach(async (to, from, next) => {
         const hasPerm = authStore.hasPermission?.(requiredPermission) ?? false
 
         if (!hasPerm) {
+          // 添加权限不足提示
+          const { ElMessage } = await import('element-plus')
+          ElMessage.warning(`您没有权限访问该页面，需要权限：${requiredPermission}`)
           next('/dashboard')
           return
         }

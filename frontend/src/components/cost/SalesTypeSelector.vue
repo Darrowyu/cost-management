@@ -69,8 +69,8 @@
           <div class="freight-field">
             <span class="freight-label">起运港口:</span>
             <el-radio-group v-model="form.port_type" @change="$emit('port-type-change')">
-              <el-radio label="fob_shenzhen">FOB 深圳</el-radio>
-              <el-radio label="other">其他港口</el-radio>
+              <el-radio value="fob_shenzhen">FOB 深圳</el-radio>
+              <el-radio value="other">其他港口</el-radio>
             </el-radio-group>
           </div>
           <div v-if="form.port_type === 'other'" class="freight-field">
@@ -84,8 +84,8 @@
           <div class="freight-field">
             <span class="freight-label">数量单位:</span>
             <el-radio-group v-model="localQuantityUnit" @change="onQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
-              <el-radio label="pcs">按片</el-radio>
-              <el-radio label="carton">按箱</el-radio>
+              <el-radio value="pcs">按片</el-radio>
+              <el-radio value="carton">按箱</el-radio>
             </el-radio-group>
           </div>
           <div class="freight-field">
@@ -150,8 +150,8 @@
         <div class="freight-field mt-4">
           <span class="freight-label w-28">运费计入成本:</span>
           <el-radio-group v-model="form.include_freight_in_base" @change="$emit('calculate')">
-            <el-radio :label="true">是</el-radio>
-            <el-radio :label="false">否（运费在管销价基础上单独计算）</el-radio>
+            <el-radio :value="true">是</el-radio>
+            <el-radio :value="false">否（运费在管销价基础上单独计算）</el-radio>
           </el-radio-group>
         </div>
       </div>
@@ -161,8 +161,8 @@
         <div class="cost-form-row cost-form-row-4">
           <el-form-item label="数量单位">
             <el-radio-group v-model="localQuantityUnit" @change="onQuantityUnitChange" :disabled="!shippingInfo.pcsPerCarton">
-              <el-radio label="pcs">按片</el-radio>
-              <el-radio label="carton">按箱</el-radio>
+              <el-radio value="pcs">按片</el-radio>
+              <el-radio value="carton">按箱</el-radio>
             </el-radio-group>
           </el-form-item>
           <el-form-item :label="localQuantityUnit === 'pcs' ? '购买数量(片)' : '购买数量(箱)'" prop="quantity">
@@ -191,8 +191,8 @@
           </el-form-item>
           <el-form-item label="运费计入成本">
             <el-radio-group v-model="form.include_freight_in_base" @change="$emit('calculate')">
-              <el-radio :label="true">是</el-radio>
-              <el-radio :label="false">否</el-radio>
+              <el-radio :value="true">是</el-radio>
+              <el-radio :value="false">否</el-radio>
             </el-radio-group>
           </el-form-item>
         </div>

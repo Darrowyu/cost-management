@@ -4,6 +4,14 @@
  */
 
 const logger = require('../utils/logger');
+const { ROLE_NAMES } = require('../config/rolePermissions');
+
+// 角色显示格式：admin保持英文，其他显示中文
+function formatRole(roleCode) {
+  if (!roleCode) return '未知';
+  if (roleCode === 'admin') return 'admin';
+  return ROLE_NAMES[roleCode] || roleCode;
+}
 
 // 需要记录的关键操作路径和方法
 const CRITICAL_OPERATIONS = [
@@ -108,8 +116,22 @@ const operationLogger = (req, res, next) => {
 
     // 重写 res.json 以捕获响应
     res.json = function (data) {
+        // 防重机制：确保每个请求只记录一次
+        if (req._operationLogged) {
+            return originalJson(data);
+        }
+        req._operationLogged = true;
+
         const duration = Date.now() - startTime;
-        const user = req.user ? `${req.user.username}(${req.user.role})` : '未登录用户';
+        // 优先从 req.user 获取（已认证请求），登录操作从响应数据中提取
+        let user = '未登录用户';
+        if (req.user) {
+            user = `${req.user.username}(${formatRole(req.user.role)})`;
+        } else if (operation.action === '用户登录' && data?.success && data?.data?.user) {
+            // 登录成功，从响应中提取用户信息
+            const loginUser = data.data.user;
+            user = `${loginUser.username}(${formatRole(loginUser.role)})`;
+        }
         const ip = req.ip || req.connection?.remoteAddress || 'unknown';
         const success = data?.success !== false && res.statusCode < 400;
 

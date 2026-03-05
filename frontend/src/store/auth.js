@@ -5,6 +5,7 @@
 import { defineStore } from 'pinia'
 import request from '../utils/request'
 import { getToken, setToken, getUser, setUser, clearAuth } from '../utils/auth'
+import logger from '../utils/logger'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -26,6 +27,21 @@ export const useAuthStore = defineStore('auth', {
 
     // 真实姓名
     realName: (state) => state.user?.real_name || state.user?.username || '',
+
+    // 是否是管理员
+    isAdmin: (state) => state.user?.role === 'admin',
+
+    // 是否是采购
+    isPurchaser: (state) => state.user?.role === 'purchaser',
+
+    // 是否是生产
+    isProducer: (state) => state.user?.role === 'producer',
+
+    // 是否是审核
+    isReviewer: (state) => state.user?.role === 'reviewer',
+
+    // 是否是业务员
+    isSalesperson: (state) => state.user?.role === 'salesperson',
 
     // 检查单个权限
     hasPermission: (state) => (permissionCode) => {
@@ -112,7 +128,7 @@ export const useAuthStore = defineStore('auth', {
           this.permissionsLoaded = true
         }
       } catch (error) {
-        console.error('获取权限失败:', error)
+        logger.error('获取权限失败:', error)
         this.permissions = []
         this.permissionsLoaded = false
       }

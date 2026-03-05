@@ -42,13 +42,12 @@
           <div class="input-group">
             <label class="input-label">密码</label>
             <div class="input-wrapper">
-              <input 
+              <input
                 v-model="loginForm.password"
-                :type="showPassword ? 'text' : 'password'" 
+                :type="showPassword ? 'text' : 'password'"
                 class="form-input"
                 placeholder="请输入密码"
                 autocomplete="current-password"
-                @keyup.enter="handleLogin"
               >
               <el-icon v-show="loginForm.password" class="password-toggle" @click="showPassword = !showPassword">
                 <View v-if="!showPassword" />

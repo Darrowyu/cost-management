@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const regulationController = require('../controllers/master/regulationController');
 const { verifyToken } = require('../middleware/auth');
-const { checkRole } = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissionCheck');
 
 // 所有路由都需要认证
 router.use(verifyToken);
@@ -20,9 +20,9 @@ router.get('/active', regulationController.getActiveRegulations);
 // 获取单个法规类别
 router.get('/:id', regulationController.getRegulationById);
 
-// 以下路由管理员、采购、生产可访问
-router.post('/', checkRole('admin', 'purchaser', 'producer'), regulationController.createRegulation);
-router.put('/:id', checkRole('admin', 'purchaser', 'producer'), regulationController.updateRegulation);
-router.delete('/:id', checkRole('admin', 'purchaser', 'producer'), regulationController.deleteRegulation);
+// 以下路由需要法规管理权限
+router.post('/', checkPermission('master:regulation:manage'), regulationController.createRegulation);
+router.put('/:id', checkPermission('master:regulation:manage'), regulationController.updateRegulation);
+router.delete('/:id', checkPermission('master:regulation:manage'), regulationController.deleteRegulation);
 
 module.exports = router;

@@ -12,7 +12,7 @@ const checkRole = (...allowedRoles) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json(error('您没有权限执行此操作', 403));
+      return res.status(403).json(error(`您没有权限执行此操作，需要角色：${allowedRoles.join(' 或 ')}`, 403));
     }
 
     next();

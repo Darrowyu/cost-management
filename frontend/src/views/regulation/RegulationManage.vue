@@ -5,7 +5,7 @@
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
-            <ActionButton v-if="showToolbar && authStore.isAdmin" type="add" @click="handleAdd">新增法规</ActionButton>
+            <ActionButton v-if="showToolbar && canManageRegulation" type="add" @click="handleAdd">新增法规</ActionButton>
           </transition>
         </div>
       </template>
@@ -42,7 +42,7 @@
               </div>
             </div>
           </div>
-          <div class="card-actions" v-if="authStore.isAdmin">
+          <div class="card-actions" v-if="canManageRegulation">
             <el-button :icon="EditPen" circle @click="handleEdit(item)" title="编辑" />
             <el-button :icon="Delete" circle class="delete-btn" @click="handleDelete(item)" title="删除" />
           </div>
@@ -61,7 +61,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" v-if="authStore.isAdmin">
+        <el-table-column label="操作" width="120" v-if="canManageRegulation">
           <template #default="{ row }">
             <el-button :icon="EditPen" circle size="small" @click="handleEdit(row)" title="编辑" />
             <el-button :icon="Delete" circle size="small" class="delete-btn" @click="handleDelete(row)" title="删除" />
@@ -115,6 +115,7 @@ import ActionButton from '@/components/common/ActionButton.vue'
 import StatusSwitch from '@/components/common/StatusSwitch.vue'
 
 const authStore = useAuthStore()
+const canManageRegulation = computed(() => authStore.hasPermission('master:regulation:manage'))
 const showToolbar = ref(false)
 const regulations = ref([])
 const filteredRegulations = ref([])

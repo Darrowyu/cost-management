@@ -70,11 +70,21 @@
         <el-form-item label="地区">
           <el-input v-model="form.region" placeholder="请输入地区" />
         </el-form-item>
-        <el-form-item label="负责业务" v-if="canAssignSalesperson">
-          <el-select v-model="form.user_id" placeholder="请选择负责业务员" clearable filterable style="width: 100%">
+        <el-form-item label="负责业务">
+          <el-select
+            v-model="form.user_id"
+            placeholder="请选择负责业务员"
+            clearable
+            filterable
+            style="width: 100%"
+            :disabled="!canAssignSalesperson"
+            :title="!canAssignSalesperson ? '需要权限：system:admin' : ''"
+          >
             <el-option v-for="u in salespersonList" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
           </el-select>
-          <div class="text-xs text-gray-400 mt-1">不选择则为公共客户，所有人可用</div>
+          <div class="text-xs text-gray-400 mt-1">
+            {{ canAssignSalesperson ? '不选择则为公共客户，所有人可用' : '需要管理员权限才能分配业务员' }}
+          </div>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />

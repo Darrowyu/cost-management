@@ -54,7 +54,17 @@
       "Bash(git pull:*)",
       "Bash(git merge:*)",
       "Bash(ls .env*:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__Filesystem__read_multiple_files",
+      "Bash(git worktree:*)",
+      "Bash(curl:*)",
+      "Bash(git:*)",
+      "Bash(set GITHUB_TOKEN=:*)",
+      "Bash(bash:*)",
+      "Bash(gh pr:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(psql:*)"
     ]
   }
 }

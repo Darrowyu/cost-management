@@ -31,11 +31,11 @@ CREATE TABLE IF NOT EXISTS permission_history (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 创建索引
-CREATE INDEX idx_role_permissions_role ON role_permissions(role_code);
-CREATE INDEX idx_role_permissions_permission ON role_permissions(permission_code);
-CREATE INDEX idx_permission_history_role ON permission_history(role_code);
-CREATE INDEX idx_permission_history_created ON permission_history(created_at);
+-- 创建索引（如果不存在）
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_code);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_code);
+CREATE INDEX IF NOT EXISTS idx_permission_history_role ON permission_history(role_code);
+CREATE INDEX IF NOT EXISTS idx_permission_history_created ON permission_history(created_at);
 
 -- 插入默认权限数据
 INSERT INTO permissions (code, label, module, description) VALUES
@@ -89,8 +89,21 @@ INSERT INTO permissions (code, label, module, description) VALUES
 
 -- 系统管理模块 - 权限
 ('system:permission:view', '查看权限', 'system', '查看权限配置'),
-('system:permission:manage', '管理权限', 'system', '修改权限配置')
+('system:permission:manage', '管理权限', 'system', '修改权限配置'),
+
+-- 补充缺失的权限定义
+('system:admin', '系统管理员', 'system', '系统最高管理权限，拥有所有功能访问权'),
+('cost:delete:all', '删除所有成本分析', 'cost', '可删除任意状态的成本分析记录'),
+('cost:manage', '成本管理高级权限', 'cost', '标准成本管理等高级成本功能'),
+('master:regulation:manage', '管理法规', 'master', '增删改法规数据'),
+('master:model:manage', '管理型号', 'master', '增删改型号数据'),
+('master:bom:manage', '管理BOM', 'master', '编辑产品BOM')
 ON CONFLICT (code) DO NOTHING;
+
+-- 为admin角色分配新权限
+INSERT INTO role_permissions (role_code, permission_code)
+VALUES ('admin', 'system:admin'), ('admin', 'cost:delete:all')
+ON CONFLICT (role_code, permission_code) DO NOTHING;
 
 -- 插入默认角色权限数据
 INSERT INTO role_permissions (role_code, permission_code) VALUES

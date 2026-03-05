@@ -25,12 +25,16 @@ async function runMigration() {
     }
 
     try {
+        // 先初始化数据库连接
+        await dbManager.initialize();
+
         logger.info(`正在执行迁移: ${migrationFile}`);
         const sql = fs.readFileSync(filePath, 'utf8');
 
         await dbManager.query(sql);
         logger.info(`✅ 迁移成功: ${migrationFile}`);
 
+        await dbManager.close();
         process.exit(0);
     } catch (error) {
         logger.error(`❌ 迁移失败: ${error.message}`);
