@@ -109,7 +109,15 @@ const operationLogger = (req, res, next) => {
     // 重写 res.json 以捕获响应
     res.json = function (data) {
         const duration = Date.now() - startTime;
-        const user = req.user ? `${req.user.username}(${req.user.role})` : '未登录用户';
+        // 优先从 req.user 获取（已认证请求），登录操作从响应数据中提取
+        let user = '未登录用户';
+        if (req.user) {
+            user = `${req.user.username}(${req.user.role})`;
+        } else if (operation.action === '用户登录' && data?.success && data?.data?.user) {
+            // 登录成功，从响应中提取用户信息
+            const loginUser = data.data.user;
+            user = `${loginUser.username}(${loginUser.role})`;
+        }
         const ip = req.ip || req.connection?.remoteAddress || 'unknown';
         const success = data?.success !== false && res.statusCode < 400;
 
