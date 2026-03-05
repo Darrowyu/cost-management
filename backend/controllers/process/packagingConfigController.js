@@ -143,36 +143,71 @@ exports.createPackagingConfig = async (req, res) => {
       return res.status(400).json({ success: false, message: '该型号下已存在同名的配置，请修改配置名称' });
     }
 
-    const configId = await PackagingConfig.create({
-      model_id, config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3, factory
-    });
-
-    if (processes && processes.length > 0) {
-      await ProcessConfig.createBatch(configId, processes);
-    }
-    if (materials && materials.length > 0) {
-      await PackagingMaterial.createBatch(configId, materials);
-    }
-
     // 计算工序总价
     const processTotal = processes?.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0) || 0;
 
-    // 更新最后修改信息
-    await PackagingConfig.updateLastModified(configId, {
-      last_modified_by: userId,
-      last_process_total: processTotal
-    });
+    // 使用事务包裹所有操作
+    const configId = await dbManager.transaction(async (client) => {
+      // 1. 创建包装配置
+      const l3ForOldField = l3 !== null && l3 !== undefined ? l3 : 1;
+      const configResult = await client.query(
+        `INSERT INTO packaging_configs
+         (model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, factory, pc_per_bag, bags_per_box, boxes_per_carton, last_modified_by, last_process_total)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id`,
+        [model_id, config_name, packaging_type, l1, l2, l3, factory, l1, l2, l3ForOldField, userId || null, processTotal]
+      );
+      const newConfigId = configResult.rows[0].id;
 
-    // 创建历史记录
-    if (userId) {
-      await ProcessConfigHistory.create({
-        packaging_config_id: configId,
-        action: 'create',
-        new_data: { processes: processes || [] },
-        new_process_total: processTotal,
-        operated_by: userId
-      });
-    }
+      // 2. 创建工序配置（批量插入优化）
+      if (processes && processes.length > 0) {
+        const processValues = processes.map((_, i) =>
+          `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
+        ).join(',');
+        const processParams = processes.flatMap(p => [
+          newConfigId, p.process_name, p.unit_price, p.sort_order || 0
+        ]);
+        await client.query(
+          `INSERT INTO process_configs (packaging_config_id, process_name, unit_price, sort_order)
+           VALUES ${processValues}`,
+          processParams
+        );
+      }
+
+      // 3. 创建包材配置（批量插入优化）
+      if (materials && materials.length > 0) {
+        const materialValues = materials.map((_, i) =>
+          `($${i * 6 + 1}, $${i * 6 + 2}, $${i * 6 + 3}, $${i * 6 + 4}, $${i * 6 + 5}, $${i * 6 + 6})`
+        ).join(',');
+        const materialParams = materials.flatMap(m => [
+          newConfigId, m.material_name, m.basic_usage, m.unit_price, m.carton_volume || null, m.sort_order || 0
+        ]);
+        await client.query(
+          `INSERT INTO packaging_materials (packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order)
+           VALUES ${materialValues}`,
+          materialParams
+        );
+      }
+
+      // 4. 创建历史记录
+      await client.query(
+        `INSERT INTO process_config_history (
+          packaging_config_id, action, new_data, new_process_total, operated_by
+        ) VALUES ($1, $2, $3, $4, $5)`,
+        [
+          newConfigId,
+          'create',
+          JSON.stringify({
+            config: { config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3, factory, is_active: true },
+            processes: processes || []
+          }),
+          processTotal,
+          userId || null
+        ]
+      );
+
+      return newConfigId;
+    });
 
     res.json({ success: true, data: { id: configId }, message: '包装配置创建成功' });
   } catch (error) {
@@ -251,54 +286,176 @@ exports.updatePackagingConfig = async (req, res) => {
       activeState = (is_active === 1 || is_active === '1' || is_active === true || is_active === 'true');
     }
 
-    // 只有生产/管理员可修改配置基本信息
-    if (canEditConfig) {
-      await PackagingConfig.update(id, {
-        config_name, packaging_type, layer1_qty: l1, layer2_qty: l2, layer3_qty: l3,
-        is_active: activeState, factory
-      });
+    // 判断是否有数据变更
+    const hasConfigChange = canEditConfig && (config_name !== undefined || packaging_type !== undefined || l1 !== undefined || l2 !== undefined || l3 !== undefined || factory !== undefined || is_active !== undefined);
+    const hasProcessChange = processes && canEditProcess;
+    const hasMaterialChange = materials && canEditMaterial;
+
+    // 如果没有变更，直接返回成功
+    if (!hasConfigChange && !hasProcessChange && !hasMaterialChange) {
+      return res.json({ success: true, message: '包装配置更新成功' });
     }
 
-    // 只有生产/管理员可修改工序
-    let oldProcesses = [];
-    let oldProcessTotal = 0;
-    if (processes && canEditProcess) {
-      // 获取旧工序数据用于历史记录
-      const oldConfig = await PackagingConfig.findWithProcesses(id);
-      oldProcesses = oldConfig?.processes || [];
-      oldProcessTotal = oldProcesses.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
-
-      await ProcessConfig.deleteByPackagingConfigId(id);
-      if (processes.length > 0) await ProcessConfig.createBatch(id, processes);
-
-      // 计算新工序总价
-      const newProcessTotal = processes.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
-
-      // 更新最后修改信息
-      await PackagingConfig.updateLastModified(id, {
-        last_modified_by: userId,
-        last_process_total: newProcessTotal
-      });
-
-      // 创建历史记录
-      if (userId) {
-        await ProcessConfigHistory.create({
-          packaging_config_id: id,
-          action: 'batch_update',
-          old_data: { processes: oldProcesses },
-          new_data: { processes },
-          old_process_total: oldProcessTotal,
-          new_process_total: newProcessTotal,
-          operated_by: userId
-        });
+    // 查询旧状态（用于检测 is_active 变更）
+    let oldActiveState = null;
+    let isActiveChanged = false;
+    let activeChangeAction = null;  // 'activate' 或 'deactivate'
+    if (is_active !== undefined && canEditConfig) {
+      const oldStateResult = await dbManager.query(
+        'SELECT is_active FROM packaging_configs WHERE id = $1',
+        [id]
+      );
+      if (oldStateResult.rows.length > 0) {
+        oldActiveState = oldStateResult.rows[0].is_active;
+        isActiveChanged = oldActiveState !== activeState;
+        if (isActiveChanged) {
+          activeChangeAction = activeState ? 'activate' : 'deactivate';
+        }
       }
     }
 
-    // 只有采购/管理员可修改包材
-    if (materials && canEditMaterial) {
-      await PackagingMaterial.deleteByPackagingConfigId(id);
-      if (materials.length > 0) await PackagingMaterial.createBatch(id, materials);
-    }
+    // 使用事务包裹所有更新操作
+    await dbManager.transaction(async (client) => {
+      // 获取旧数据（用于历史记录）
+      let oldConfig = null;
+      let oldProcesses = [];
+      let oldProcessTotal = 0;
+
+      if ((hasProcessChange || isActiveChanged) && userId) {
+        const oldConfigResult = await client.query(
+          `SELECT id, model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, factory, is_active
+           FROM packaging_configs WHERE id = $1`,
+          [id]
+        );
+        if (oldConfigResult.rows.length > 0) {
+          oldConfig = oldConfigResult.rows[0];
+        }
+
+        if (hasProcessChange) {
+          const oldProcessResult = await client.query(
+            `SELECT id, process_name, unit_price, sort_order FROM process_configs
+             WHERE packaging_config_id = $1 AND is_active = true ORDER BY sort_order, id`,
+            [id]
+          );
+          oldProcesses = oldProcessResult.rows;
+          oldProcessTotal = oldProcesses.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
+        }
+      }
+
+      // 1. 更新配置基本信息
+      if (hasConfigChange) {
+        const updateFields = [];
+        const updateValues = [];
+        let paramIndex = 1;
+
+        if (config_name !== undefined) { updateFields.push(`config_name = $${paramIndex++}`); updateValues.push(config_name); }
+        if (packaging_type !== undefined) { updateFields.push(`packaging_type = $${paramIndex++}`); updateValues.push(packaging_type); }
+        if (l1 !== undefined) {
+          updateFields.push(`layer1_qty = $${paramIndex++}`);
+          updateFields.push(`pc_per_bag = $${paramIndex++}`);
+          updateValues.push(l1, l1);
+        }
+        if (l2 !== undefined) {
+          updateFields.push(`layer2_qty = $${paramIndex++}`);
+          updateFields.push(`bags_per_box = $${paramIndex++}`);
+          updateValues.push(l2, l2);
+        }
+        if (l3 !== undefined) {
+          updateFields.push(`layer3_qty = $${paramIndex++}`);
+          updateFields.push(`boxes_per_carton = $${paramIndex++}`);
+          updateValues.push(l3, l3 !== null && l3 !== undefined ? l3 : 1);
+        }
+        if (factory !== undefined) { updateFields.push(`factory = $${paramIndex++}`); updateValues.push(factory); }
+        if (is_active !== undefined) { updateFields.push(`is_active = $${paramIndex++}`); updateValues.push(activeState); }
+
+        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+        updateValues.push(id);
+
+        await client.query(
+          `UPDATE packaging_configs SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
+          updateValues
+        );
+      }
+
+      // 2. 更新工序配置
+      let newProcessTotal = 0;
+      if (hasProcessChange) {
+        // 删除旧工序
+        await client.query('DELETE FROM process_configs WHERE packaging_config_id = $1', [id]);
+
+        // 插入新工序（批量插入优化）
+        if (processes.length > 0) {
+          const processValues = processes.map((_, i) =>
+            `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
+          ).join(',');
+          const processParams = processes.flatMap(p => [
+            id, p.process_name, p.unit_price, p.sort_order || 0
+          ]);
+          await client.query(
+            `INSERT INTO process_configs (packaging_config_id, process_name, unit_price, sort_order)
+             VALUES ${processValues}`,
+            processParams
+          );
+        }
+
+        // 计算新工序总价
+        newProcessTotal = processes.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0);
+
+        // 更新最后修改信息
+        await client.query(
+          `UPDATE packaging_configs SET last_modified_by = $1, last_process_total = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+          [userId || null, newProcessTotal, id]
+        );
+      }
+
+      // 3. 更新包材配置
+      if (hasMaterialChange) {
+        await client.query('DELETE FROM packaging_materials WHERE packaging_config_id = $1', [id]);
+
+        if (materials.length > 0) {
+          const materialValues = materials.map((_, i) =>
+            `($${i * 6 + 1}, $${i * 6 + 2}, $${i * 6 + 3}, $${i * 6 + 4}, $${i * 6 + 5}, $${i * 6 + 6})`
+          ).join(',');
+          const materialParams = materials.flatMap(m => [
+            id, m.material_name, m.basic_usage, m.unit_price, m.carton_volume || null, m.sort_order || 0
+          ]);
+          await client.query(
+            `INSERT INTO packaging_materials (packaging_config_id, material_name, basic_usage, unit_price, carton_volume, sort_order)
+             VALUES ${materialValues}`,
+            materialParams
+          );
+        }
+      }
+
+      // 4. 创建历史记录
+      if (userId && (hasProcessChange || isActiveChanged)) {
+        // 获取新配置数据
+        const newConfigResult = await client.query(
+          `SELECT id, model_id, config_name, packaging_type, layer1_qty, layer2_qty, layer3_qty, factory, is_active
+           FROM packaging_configs WHERE id = $1`,
+          [id]
+        );
+        const newConfig = newConfigResult.rows[0];
+
+        // 确定 action：优先使用状态变更的 action
+        const historyAction = activeChangeAction || 'batch_update';
+
+        await client.query(
+          `INSERT INTO process_config_history (
+            packaging_config_id, action, old_data, new_data, old_process_total, new_process_total, operated_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            id,
+            historyAction,
+            JSON.stringify({ config: oldConfig, processes: oldProcesses }),
+            JSON.stringify({ config: newConfig, processes: processes || [] }),
+            oldProcessTotal,
+            newProcessTotal,
+            userId
+          ]
+        );
+      }
+    });
 
     res.json({ success: true, message: '包装配置更新成功' });
   } catch (error) {
@@ -334,18 +491,11 @@ const checkDeleteConstraints = async (id) => {
   return null; // 可删除
 };
 
-// 辅助函数：级联软删除包材和工序
-const cascadeSoftDelete = async (id) => {
-  await Promise.all([
-    dbManager.query('UPDATE packaging_materials SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1', [id]),
-    dbManager.query('UPDATE process_configs SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1', [id])
-  ]);
-};
-
 // 删除包装配置
 exports.deletePackagingConfig = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
 
     const reason = await checkDeleteConstraints(id);
     if (reason) {
@@ -356,8 +506,65 @@ exports.deletePackagingConfig = async (req, res) => {
       return res.status(400).json({ success: false, message: messages[reason] });
     }
 
-    await cascadeSoftDelete(id);
-    await PackagingConfig.delete(id);
+    // 获取完整配置数据（用于历史记录）
+    const configToDelete = await PackagingConfig.findWithDetails(id);
+    if (!configToDelete) {
+      return res.status(404).json({ success: false, message: '包装配置不存在' });
+    }
+
+    const processTotal = configToDelete.processes?.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0) || 0;
+
+    // 使用事务包裹删除和历史记录创建
+    await dbManager.transaction(async (client) => {
+      // 1. 软删除包材和工序
+      await client.query(
+        'UPDATE packaging_materials SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1',
+        [id]
+      );
+      await client.query(
+        'UPDATE process_configs SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1',
+        [id]
+      );
+
+      // 2. 软删除包装配置
+      const deletedName = `${configToDelete.config_name}_deleted_${Date.now()}`;
+      await client.query(
+        `UPDATE packaging_configs
+         SET is_active = false, config_name = $1, updated_at = NOW()
+         WHERE id = $2`,
+        [deletedName, id]
+      );
+
+      // 3. 创建删除历史记录
+      if (userId) {
+        await client.query(
+          `INSERT INTO process_config_history (
+            packaging_config_id, action, old_data, new_data, old_process_total, new_process_total, operated_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            id,
+            'delete',
+            JSON.stringify({
+              config: {
+                config_name: configToDelete.config_name,
+                packaging_type: configToDelete.packaging_type,
+                layer1_qty: configToDelete.layer1_qty,
+                layer2_qty: configToDelete.layer2_qty,
+                layer3_qty: configToDelete.layer3_qty,
+                factory: configToDelete.factory,
+                is_active: configToDelete.is_active
+              },
+              processes: configToDelete.processes || []
+            }),
+            null,  // 删除后无新数据
+            processTotal,
+            0,  // 删除后总价为0
+            userId
+          ]
+        );
+      }
+    });
+
     res.json({ success: true, message: '包装配置删除成功' });
   } catch (error) {
     logger.error('删除包装配置失败:', error);
@@ -369,6 +576,7 @@ exports.deletePackagingConfig = async (req, res) => {
 exports.batchDeletePackagingConfigs = async (req, res) => {
   try {
     const { ids } = req.body;
+    const userId = req.user?.id;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: '请提供要删除的配置ID' });
     }
@@ -385,9 +593,67 @@ exports.batchDeletePackagingConfigs = async (req, res) => {
         continue;
       }
 
-      await cascadeSoftDelete(id);
-      await PackagingConfig.delete(id);
-      results.deleted++;
+      // 获取完整配置数据（用于历史记录）
+      const configToDelete = await PackagingConfig.findWithDetails(id);
+      if (!configToDelete) continue;
+
+      const processTotal = configToDelete.processes?.reduce((sum, p) => sum + (parseFloat(p.unit_price) || 0), 0) || 0;
+
+      // 使用事务包裹删除和历史记录创建
+      try {
+        await dbManager.transaction(async (client) => {
+          // 1. 软删除包材和工序
+          await client.query(
+            'UPDATE packaging_materials SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1',
+            [id]
+          );
+          await client.query(
+            'UPDATE process_configs SET is_active = false, updated_at = NOW() WHERE packaging_config_id = $1',
+            [id]
+          );
+
+          // 2. 软删除包装配置
+          const deletedName = `${configToDelete.config_name}_deleted_${Date.now()}`;
+          await client.query(
+            `UPDATE packaging_configs
+             SET is_active = false, config_name = $1, updated_at = NOW()
+             WHERE id = $2`,
+            [deletedName, id]
+          );
+
+          // 3. 创建删除历史记录
+          if (userId) {
+            await client.query(
+              `INSERT INTO process_config_history (
+                packaging_config_id, action, old_data, new_data, old_process_total, new_process_total, operated_by
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                id,
+                'delete',
+                JSON.stringify({
+                  config: {
+                    config_name: configToDelete.config_name,
+                    packaging_type: configToDelete.packaging_type,
+                    layer1_qty: configToDelete.layer1_qty,
+                    layer2_qty: configToDelete.layer2_qty,
+                    layer3_qty: configToDelete.layer3_qty,
+                    factory: configToDelete.factory,
+                    is_active: configToDelete.is_active
+                  },
+                  processes: configToDelete.processes || []
+                }),
+                null,  // 删除后无新数据
+                processTotal,
+                0,  // 删除后总价为0
+                userId
+              ]
+            );
+          }
+        });
+        results.deleted++;
+      } catch (err) {
+        results.failed.push({ id, name: config.config_name, reason: err.message });
+      }
     }
 
     const msg = results.deleted > 0 ? `成功删除 ${results.deleted} 条` : '无可删除项';
