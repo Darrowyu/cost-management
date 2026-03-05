@@ -116,6 +116,12 @@ const operationLogger = (req, res, next) => {
 
     // 重写 res.json 以捕获响应
     res.json = function (data) {
+        // 防重机制：确保每个请求只记录一次
+        if (req._operationLogged) {
+            return originalJson(data);
+        }
+        req._operationLogged = true;
+
         const duration = Date.now() - startTime;
         // 优先从 req.user 获取（已认证请求），登录操作从响应数据中提取
         let user = '未登录用户';
