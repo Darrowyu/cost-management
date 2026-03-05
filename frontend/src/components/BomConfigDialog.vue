@@ -191,8 +191,8 @@ const allModels = ref([])
 const modelsLoading = ref(false)
 const sourceBomPreview = ref([])
 
-// 权限检查：只有管理员和生产人员可以编辑
-const canEdit = computed(() => authStore.isAdmin || authStore.isProducer)
+// 权限检查：只有拥有BOM管理权限的人员可以编辑
+const canEdit = computed(() => authStore.hasPermission('master:bom:manage'))
 
 // 新建原料
 const showNewMaterialDialog = ref(false)

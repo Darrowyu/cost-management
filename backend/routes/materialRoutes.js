@@ -8,7 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const materialController = require('../controllers/master/materialController');
 const { verifyToken } = require('../middleware/auth');
-const { isPurchaser } = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissionCheck');
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -53,20 +53,20 @@ router.get('/manufacturer/:manufacturer', materialController.getMaterialsByManuf
 // 获取单个原料
 router.get('/:id', materialController.getMaterialById);
 
-// 以下路由需要采购权限
-router.post('/', isPurchaser, materialController.createMaterial);
-router.post('/batch-delete', isPurchaser, materialController.batchDeleteMaterials);
-router.put('/:id', isPurchaser, materialController.updateMaterial);
-router.delete('/:id', isPurchaser, materialController.deleteMaterial);
+// 以下路由需要原料管理权限
+router.post('/', checkPermission('master:material:manage'), materialController.createMaterial);
+router.post('/batch-delete', checkPermission('master:material:manage'), materialController.batchDeleteMaterials);
+router.put('/:id', checkPermission('master:material:manage'), materialController.updateMaterial);
+router.delete('/:id', checkPermission('master:material:manage'), materialController.deleteMaterial);
 
 // 检查品号或创建原料
-router.post('/check-or-create', isPurchaser, materialController.checkOrCreate);
+router.post('/check-or-create', checkPermission('master:material:manage'), materialController.checkOrCreate);
 
 // Excel 导入导出
-router.post('/import', isPurchaser, upload.single('file'), materialController.importMaterials);
-router.post('/import/precheck', isPurchaser, upload.single('file'), materialController.preCheckImport);
-router.post('/import/confirm', isPurchaser, materialController.confirmImport);
-router.post('/export/excel', isPurchaser, materialController.exportMaterials);
+router.post('/import', checkPermission('master:material:manage'), upload.single('file'), materialController.importMaterials);
+router.post('/import/precheck', checkPermission('master:material:manage'), upload.single('file'), materialController.preCheckImport);
+router.post('/import/confirm', checkPermission('master:material:manage'), materialController.confirmImport);
+router.post('/export/excel', checkPermission('master:material:manage'), materialController.exportMaterials);
 router.get('/template/download', materialController.downloadTemplate);
 
 module.exports = router;

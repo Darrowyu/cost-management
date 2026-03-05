@@ -10,71 +10,11 @@ const { success, error } = require('../utils/response');
 const { ROLE_NAMES } = require('../config/rolePermissions');
 const dbManager = require('../db/database');
 const logger = require('../utils/logger');
-
-// 权限缓存
-let permissionsCache = null;
-let rolePermissionsCache = {};
-let cacheTimestamp = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
-
-// 获取权限定义（带缓存）
-async function getPermissions() {
-  const now = Date.now();
-  if (permissionsCache && cacheTimestamp && (now - cacheTimestamp < CACHE_TTL)) {
-    return permissionsCache;
-  }
-
-  const result = await dbManager.query('SELECT * FROM permissions ORDER BY module, code');
-  const permissions = {};
-  const modules = {};
-
-  result.rows.forEach(row => {
-    permissions[row.code] = {
-      label: row.label,
-      module: row.module,
-      description: row.description
-    };
-
-    if (!modules[row.module]) {
-      modules[row.module] = {
-        label: getModuleLabel(row.module),
-        icon: getModuleIcon(row.module)
-      };
-    }
-  });
-
-  permissionsCache = { permissions, modules };
-  cacheTimestamp = now;
-  return permissionsCache;
-}
-
-// 获取角色权限（带缓存）
-async function getRolePermissionsFromDB(roleCode) {
-  if (roleCode === 'admin') {
-    const { permissions } = await getPermissions();
-    return Object.keys(permissions);
-  }
-
-  const now = Date.now();
-  if (rolePermissionsCache[roleCode] && cacheTimestamp && (now - cacheTimestamp < CACHE_TTL)) {
-    return rolePermissionsCache[roleCode];
-  }
-
-  const result = await dbManager.query(
-    'SELECT permission_code FROM role_permissions WHERE role_code = $1',
-    [roleCode]
-  );
-
-  const permissions = result.rows.map(r => r.permission_code);
-  rolePermissionsCache[roleCode] = permissions;
-  return permissions;
-}
+const { getPermissions, getRolePermissionsFromDB, clearPermissionsCache } = require('../utils/permissions');
 
 // 清除缓存
 function clearCache() {
-  permissionsCache = null;
-  rolePermissionsCache = {};
-  cacheTimestamp = null;
+  clearPermissionsCache();
 }
 
 // 获取模块标签

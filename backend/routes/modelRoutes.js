@@ -9,7 +9,7 @@ const path = require('path');
 const modelController = require('../controllers/master/modelController');
 const modelImageController = require('../controllers/master/modelImageController');
 const { verifyToken } = require('../middleware/auth');
-const { checkRole } = require('../middleware/roleCheck');
+const { checkPermission } = require('../middleware/permissionCheck');
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -107,18 +107,18 @@ router.get('/:id', modelController.getModelById);
 
 // 型号图片管理
 router.get('/:id/images', modelImageController.getImages);
-router.post('/:id/images', checkRole('admin', 'purchaser', 'producer'), imageUpload.array('images', 10), verifyImageSignature, modelImageController.uploadImages);
-router.put('/:id/images/:imageId/primary', checkRole('admin', 'purchaser', 'producer'), modelImageController.setPrimary);
-router.delete('/:id/images/:imageId', checkRole('admin', 'purchaser', 'producer'), modelImageController.deleteImage);
+router.post('/:id/images', checkPermission('master:model:manage'), imageUpload.array('images', 10), verifyImageSignature, modelImageController.uploadImages);
+router.put('/:id/images/:imageId/primary', checkPermission('master:model:manage'), modelImageController.setPrimary);
+router.delete('/:id/images/:imageId', checkPermission('master:model:manage'), modelImageController.deleteImage);
 
-// 以下路由管理员、采购、生产可访问
-router.post('/', checkRole('admin', 'purchaser', 'producer'), modelController.createModel);
-router.put('/:id', checkRole('admin', 'purchaser', 'producer'), modelController.updateModel);
-router.delete('/:id', checkRole('admin', 'purchaser', 'producer'), modelController.deleteModel);
+// 以下路由需要型号管理权限
+router.post('/', checkPermission('master:model:manage'), modelController.createModel);
+router.put('/:id', checkPermission('master:model:manage'), modelController.updateModel);
+router.delete('/:id', checkPermission('master:model:manage'), modelController.deleteModel);
 
-// 导入导出功能（管理员、采购、生产可访问）
-router.post('/import', checkRole('admin', 'purchaser', 'producer'), upload.single('file'), modelController.importModels);
-router.post('/export/excel', checkRole('admin', 'purchaser', 'producer'), modelController.exportModels);
-router.get('/template/download', checkRole('admin', 'purchaser', 'producer'), modelController.downloadTemplate);
+// 导入导出功能需要型号管理权限
+router.post('/import', checkPermission('master:model:manage'), upload.single('file'), modelController.importModels);
+router.post('/export/excel', checkPermission('master:model:manage'), modelController.exportModels);
+router.get('/template/download', checkPermission('master:model:manage'), modelController.downloadTemplate);
 
 module.exports = router;

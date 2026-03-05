@@ -11,7 +11,7 @@
     <el-tabs v-model="activeTab" class="config-tabs">
       <!-- 业务配置 Tab -->
       <el-tab-pane label="业务配置" name="business">
-        <el-form :model="configForm" :disabled="!authStore.isAdmin" class="config-form">
+        <el-form :model="configForm" :disabled="!canManageConfig" class="config-form">
           <!-- Bento Grid 布局 -->
           <div class="bento-grid">
             <!-- 基础费率 - 小卡片 -->
@@ -48,9 +48,9 @@
                     <div v-for="(rate, index) in configForm.vat_rate_options" :key="index" class="config-tag">
                       <el-input-number v-model="configForm.vat_rate_options[index]" :min="0" :max="1" :precision="2" :step="0.01" :controls="false" class="config-tag-input" />
                       <span class="config-tag-suffix">{{ (rate * 100).toFixed(0) }}%</span>
-                      <button type="button" class="config-tag-remove" @click="removeVatRateOption(index)" v-if="configForm.vat_rate_options.length > 1 && authStore.isAdmin">&times;</button>
+                      <button type="button" class="config-tag-remove" @click="removeVatRateOption(index)" v-if="configForm.vat_rate_options.length > 1 && canManageConfig">&times;</button>
                     </div>
-                    <button type="button" class="config-tag-add" @click="addVatRateOption" v-if="authStore.isAdmin">+</button>
+                    <button type="button" class="config-tag-add" @click="addVatRateOption" v-if="canManageConfig">+</button>
                   </div>
                 </div>
               </div>
@@ -245,9 +245,9 @@
                   <div v-for="(tier, index) in configForm.profit_tiers" :key="index" class="config-tag">
                     <el-input-number v-model="configForm.profit_tiers[index]" :min="0" :max="1" :precision="2" :step="0.05" :controls="false" class="config-tag-input" />
                     <span class="config-tag-suffix">{{ (tier * 100).toFixed(0) }}%</span>
-                    <button type="button" class="config-tag-remove" @click="removeProfitTier(index)" v-if="configForm.profit_tiers.length > 1 && authStore.isAdmin">&times;</button>
+                    <button type="button" class="config-tag-remove" @click="removeProfitTier(index)" v-if="configForm.profit_tiers.length > 1 && canManageConfig">&times;</button>
                   </div>
-                  <button type="button" class="config-tag-add" @click="addProfitTier" v-if="authStore.isAdmin">+ 添加档位</button>
+                  <button type="button" class="config-tag-add" @click="addProfitTier" v-if="canManageConfig">+ 添加档位</button>
                 </div>
               </div>
             </section>
@@ -256,7 +256,7 @@
 
         <!-- 底部操作 -->
         <div class="config-footer">
-          <el-button type="primary" @click="handleSave" :loading="saving" v-if="authStore.isAdmin">保存业务配置</el-button>
+          <el-button type="primary" @click="handleSave" :loading="saving" v-if="canManageConfig">保存业务配置</el-button>
           <span class="config-footer-note">配置修改后立即生效，仅影响新报价单</span>
         </div>
       </el-tab-pane>
@@ -276,22 +276,22 @@
             <el-table-column label="原料计算" width="280">
               <template #default="{ row }">
                 <div class="rule-row">
-                  <el-select v-model="row.material.formula" placeholder="公式" :disabled="!authStore.isAdmin" style="width: 250px">
+                  <el-select v-model="row.material.formula" placeholder="公式" :disabled="!canManageConfig" style="width: 250px">
                     <el-option label="乘: (用量×单价)÷系数" value="multiply" />
                     <el-option label="除: (单价÷用量)÷系数" value="divide" />
                   </el-select>
-                  <el-input-number v-model="row.material.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!authStore.isAdmin" style="width: 80px" />
+                  <el-input-number v-model="row.material.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!canManageConfig" style="width: 80px" />
                 </div>
               </template>
             </el-table-column>
             <el-table-column label="包材计算" width="280">
               <template #default="{ row }">
                 <div class="rule-row">
-                  <el-select v-model="row.packaging.formula" placeholder="公式" :disabled="!authStore.isAdmin" style="width: 250px">
+                  <el-select v-model="row.packaging.formula" placeholder="公式" :disabled="!canManageConfig" style="width: 250px">
                     <el-option label="乘: (用量×单价)÷系数" value="multiply" />
                     <el-option label="除: (单价÷用量)÷系数" value="divide" />
                   </el-select>
-                  <el-input-number v-model="row.packaging.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!authStore.isAdmin" style="width: 80px" />
+                  <el-input-number v-model="row.packaging.coefficient" :min="0.01" :max="999" :precision="2" :step="0.01" :controls="false" :disabled="!canManageConfig" style="width: 80px" />
                 </div>
               </template>
             </el-table-column>
@@ -306,7 +306,7 @@
           </div>
 
           <div class="config-footer">
-            <el-button type="primary" @click="saveCalculationRules" :loading="savingCalculationRules" v-if="authStore.isAdmin">保存计算规则</el-button>
+            <el-button type="primary" @click="saveCalculationRules" :loading="savingCalculationRules" v-if="canManageConfig">保存计算规则</el-button>
             <span class="config-footer-note">修改后立即生效，仅影响新报价单</span>
           </div>
         </section>
@@ -325,26 +325,26 @@
             <el-table :data="materialCategories" border stripe size="small" class="category-table" empty-text="暂无类别，请点击下方按钮添加">
               <el-table-column label="类别名称" min-width="200">
                 <template #default="{ row }">
-                  <el-input v-model="row.name" placeholder="请输入类别名称" :disabled="!authStore.isAdmin" />
+                  <el-input v-model="row.name" placeholder="请输入类别名称" :disabled="!canManageConfig" />
                 </template>
               </el-table-column>
               <el-table-column label="排序" width="100" align="center">
                 <template #default="{ row }">
-                  <el-input-number v-model="row.sort" :min="1" :max="999" :controls="false" :disabled="!authStore.isAdmin" style="width: 80px" />
+                  <el-input-number v-model="row.sort" :min="1" :max="999" :controls="false" :disabled="!canManageConfig" style="width: 80px" />
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="80" align="center">
                 <template #default="{ $index }">
-                  <el-button type="danger" :icon="Delete" circle size="small" @click="removeCategory($index)" :disabled="!authStore.isAdmin" />
+                  <el-button type="danger" :icon="Delete" circle size="small" @click="removeCategory($index)" :disabled="!canManageConfig" />
                 </template>
               </el-table-column>
             </el-table>
 
             <div class="bento-footer">
-              <el-button type="primary" plain @click="showAddCategoryDialog" v-if="authStore.isAdmin">
+              <el-button type="primary" plain @click="showAddCategoryDialog" v-if="canManageConfig">
                 <el-icon><Plus /></el-icon> 新增类别
               </el-button>
-              <el-button type="primary" @click="saveCategories" :loading="savingCategories" v-if="authStore.isAdmin">保存类别配置</el-button>
+              <el-button type="primary" @click="saveCategories" :loading="savingCategories" v-if="canManageConfig">保存类别配置</el-button>
             </div>
           </section>
         </div>
@@ -370,7 +370,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { onBeforeRouteLeave } from 'vue-router';
 import { Plus, Delete, Money, Switch, Ship, Box, Files, TrendCharts, FolderOpened } from '@element-plus/icons-vue';
@@ -384,6 +384,7 @@ defineOptions({ name: 'SystemConfig' })
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
+const canManageConfig = computed(() => authStore.hasPermission('system:config:manage'));
 
 const activeTab = ref('business');
 
@@ -481,7 +482,7 @@ watch(materialCategories, checkChanges, { deep: true });
 watch(calculationRulesList, checkChanges, { deep: true });
 
 const handleSave = async () => {
-  if (!authStore.isAdmin) { ElMessage.warning('只有管理员可以修改配置'); return; }
+  if (!canManageConfig) { ElMessage.warning('只有管理员可以修改配置'); return; }
   if (configForm.overhead_rate < 0 || configForm.overhead_rate > 1) { ElMessage.error('管销率必须在 0 到 1 之间'); return; }
   if (configForm.vat_rate < 0 || configForm.vat_rate > 1) { ElMessage.error('增值税率必须在 0 到 1 之间'); return; }
   if (configForm.insurance_rate < 0 || configForm.insurance_rate > 1) { ElMessage.error('保险率必须在 0 到 1 之间'); return; }

@@ -229,7 +229,7 @@ const configStore = useConfigStore()
 const showToolbar = ref(false)
 
 // 权限检查
-const canEdit = computed(() => authStore.isAdmin || authStore.isProducer)
+const canEdit = computed(() => authStore.hasPermission('master:process:manage'))
 
 // 包装类型选项
 const packagingTypeOptions = getPackagingTypeOptions()

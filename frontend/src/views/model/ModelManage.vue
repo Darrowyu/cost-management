@@ -5,7 +5,7 @@
         <div class="toolbar-wrapper">
           <el-button class="toolbar-toggle" :icon="showToolbar ? CaretRight : CaretLeft" circle @click="showToolbar = !showToolbar" :title="showToolbar ? '收起工具栏' : '展开工具栏'" />
           <transition name="toolbar-fade">
-            <el-space v-if="showToolbar && authStore.isAdmin">
+            <el-space v-if="showToolbar && canManageModel">
               <ActionButton type="download" @click="handleDownloadTemplate">下载模板</ActionButton>
               <el-upload action="#" :auto-upload="false" :on-change="handleFileChange" :show-file-list="false" accept=".xlsx,.xls">
                 <ActionButton type="import">导入Excel</ActionButton>
@@ -59,7 +59,7 @@
               </div>
             </div>
           </div>
-          <div class="card-actions" v-if="authStore.isAdmin">
+          <div class="card-actions" v-if="canManageModel">
             <el-button :icon="Setting" circle @click="handleConfigBom(item)" title="配置BOM" />
             <el-button :icon="EditPen" circle @click="handleEdit(item)" title="编辑" />
             <el-button :icon="Delete" circle class="delete-btn" @click="handleDelete(item)" title="删除" />
@@ -95,7 +95,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" v-if="authStore.isAdmin">
+        <el-table-column label="操作" width="160" v-if="canManageModel">
           <template #default="{ row }">
             <el-button :icon="Setting" circle size="small" @click="handleConfigBom(row)" title="配置BOM" />
             <el-button :icon="EditPen" circle size="small" @click="handleEdit(row)" title="编辑" />
@@ -213,6 +213,7 @@ import { usePagination } from '@/composables/usePagination'
 defineOptions({ name: 'ModelManage' })
 
 const authStore = useAuthStore()
+const canManageModel = computed(() => authStore.hasPermission('master:model:manage'))
 const showToolbar = ref(false)
 const models = ref([])
 const seriesList = ref([]) // 所有产品系列列表

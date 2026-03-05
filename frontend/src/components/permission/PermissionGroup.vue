@@ -9,7 +9,7 @@
         <el-checkbox
           :model-value="isGroupAllSelected(moduleKey)"
           :indeterminate="isGroupIndeterminate(moduleKey)"
-          @change="(val) => $emit('toggle-group-all', moduleKey, val)"
+          @click.stop="handleGroupClick"
         >
           全选
         </el-checkbox>
@@ -27,7 +27,7 @@
         <div class="permission-check">
           <el-checkbox
             :model-value="selectedPermissions.includes(perm.code)"
-            @change="$emit('toggle-permission', perm.code)"
+            @click.stop="togglePermission(perm.code)"
           >
             <span class="permission-label">{{ perm.label }}</span>
           </el-checkbox>
@@ -73,6 +73,17 @@ const isCollapsed = ref(true)  // 默认折叠
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
+}
+
+// 切换单个权限
+const togglePermission = (permCode) => {
+  emit('toggle-permission', permCode)
+}
+
+// 处理全选点击
+const handleGroupClick = () => {
+  const isAllSelected = props.isGroupAllSelected(props.moduleKey)
+  emit('toggle-group-all', props.moduleKey, !isAllSelected)
 }
 
 // 暴露方法给父组件控制折叠状态
