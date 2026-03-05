@@ -248,11 +248,13 @@ function buildMenuByPermissions(permissions, role) {
 
   // 成本管理模块
   const costChildren = [];
-  if (permissions.includes('cost:create')) {
+  // 检查是否有成本相关权限（view 或 manage 都显示）
+  const hasCostPermission = permissions.some(p => p.startsWith('cost:'));
+  if (hasCostPermission && permissions.includes('cost:create')) {
     costChildren.push({ id: 'cost_add', label: '新增成本分析', route: '/cost/add', icon: 'ri-add-circle-line' });
     costChildren.push({ id: 'cost_estimation', label: '新产品预估', route: '/cost/add?mode=estimation', icon: 'ri-lightbulb-line' });
   }
-  if (permissions.includes('cost:view')) {
+  if (hasCostPermission && (permissions.includes('cost:view') || permissions.includes('cost:manage'))) {
     costChildren.push({ id: 'cost_standard', label: '标准成本', route: '/cost/standard', icon: 'ri-bookmark-line' });
     costChildren.push({ id: 'cost_records', label: '成本记录', route: '/cost/records', icon: 'ri-file-list-3-line' });
   }
@@ -268,7 +270,7 @@ function buildMenuByPermissions(permissions, role) {
 
   // 审核管理模块
   const reviewChildren = [];
-  if (permissions.includes('review:view')) {
+  if (permissions.includes('review:view') || permissions.includes('review:approve')) {
     reviewChildren.push({ id: 'review_pending', label: '待审核记录', route: '/review/pending', icon: 'ri-time-line' });
     reviewChildren.push({ id: 'review_approved', label: '已审核记录', route: '/review/approved', icon: 'ri-check-double-line' });
   }
@@ -284,13 +286,13 @@ function buildMenuByPermissions(permissions, role) {
 
   // 基础数据模块 - 独立菜单项
   const masterItems = [];
-  if (permissions.includes('master:regulation:view')) {
+  if (permissions.includes('master:regulation:view') || permissions.includes('master:regulation:manage')) {
     masterItems.push({ id: 'regulation', label: '法规管理', icon: 'ri-government-line', route: '/regulations' });
   }
-  if (permissions.includes('master:customer:view')) {
+  if (permissions.includes('master:customer:view') || permissions.includes('master:customer:manage')) {
     masterItems.push({ id: 'customer', label: '客户管理', icon: 'ri-user-3-line', route: '/customers' });
   }
-  if (permissions.includes('master:material:view')) {
+  if (permissions.includes('master:material:view') || permissions.includes('master:material:manage')) {
     masterItems.push({
       id: 'material',
       label: '原料管理',
@@ -309,13 +311,13 @@ function buildMenuByPermissions(permissions, role) {
 
   // 产品管理 - 仅包含型号、工序、包材
   const productItems = [];
-  if (permissions.includes('master:model:view')) {
+  if (permissions.includes('master:model:view') || permissions.includes('master:model:manage')) {
     productItems.push({ id: 'model', label: '型号管理', route: '/models', icon: 'ri-price-tag-3-line' });
   }
-  if (permissions.includes('master:process:view')) {
+  if (permissions.includes('master:process:view') || permissions.includes('master:process:manage')) {
     productItems.push({ id: 'process', label: '工序管理', route: '/processes', icon: 'ri-settings-4-line' });
   }
-  if (permissions.includes('master:packaging:view')) {
+  if (permissions.includes('master:packaging:view') || permissions.includes('master:packaging:manage')) {
     productItems.push({ id: 'packaging', label: '包材管理', route: '/packaging', icon: 'ri-box-3-line' });
   }
 
@@ -330,13 +332,14 @@ function buildMenuByPermissions(permissions, role) {
 
   // 系统管理模块
   const systemItems = [];
-  if (permissions.includes('system:config:view')) {
+  // 有查看或管理配置权限都显示系统配置菜单
+  if (permissions.includes('system:config:view') || permissions.includes('system:config:manage')) {
     systemItems.push({ id: 'config', label: '系统配置', icon: 'ri-equalizer-line', route: '/config' });
   }
-  if (permissions.includes('system:permission:view')) {
+  if (permissions.includes('system:permission:view') || permissions.includes('system:permission:manage')) {
     systemItems.push({ id: 'permission', label: '权限管理', icon: 'ri-shield-keyhole-line', route: '/config/permissions' });
   }
-  if (permissions.includes('system:user:view')) {
+  if (permissions.includes('system:user:view') || permissions.includes('system:user:manage')) {
     systemItems.push({ id: 'user', label: '用户管理', icon: 'ri-user-settings-line', route: '/users' });
   }
 
