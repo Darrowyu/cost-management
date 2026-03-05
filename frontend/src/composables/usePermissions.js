@@ -34,30 +34,16 @@ export function usePermissions() {
     return groups
   })
 
-  // 角色图标映射
-  const getRoleIcon = (roleCode) => {
-    const icons = {
-      admin: 'ri-shield-user-fill',
-      purchaser: 'ri-shopping-cart-line',
-      producer: 'ri-settings-3-line',
-      reviewer: 'ri-checkbox-circle-line',
-      salesperson: 'ri-briefcase-line',
-      readonly: 'ri-eye-line'
-    }
-    return icons[roleCode] || 'ri-user-line'
-  }
+  // 角色描述映射（从后端获取）
+  const roleDescMap = ref({})
 
   // 获取角色说明
   const getRoleDescription = (roleCode) => {
-    const descriptions = {
-      admin: '系统最高权限，拥有所有功能的访问和操作权限',
-      purchaser: '负责原料采购管理，可管理原料数据，查看基础数据',
-      producer: '负责生产管理，可管理工序和包材，查看基础数据',
-      reviewer: '负责审核成本分析，可批准或退回报价，查看成本数据',
-      salesperson: '负责业务报价，可创建和管理成本分析，管理客户',
-      readonly: '仅查看权限，无法修改任何数据，适合访客使用'
+    // 优先从动态映射获取
+    if (roleDescMap.value[roleCode]) {
+      return roleDescMap.value[roleCode]
     }
-    return descriptions[roleCode] || ''
+    return ''
   }
 
   // 获取角色权限数量
@@ -145,6 +131,13 @@ export function usePermissions() {
         modules.value = response.data.modules
         roles.value = response.data.roles
 
+        // 初始化角色描述映射
+        const descMap = {}
+        response.data.roles.forEach(role => {
+          if (role.description) descMap[role.code] = role.description
+        })
+        roleDescMap.value = descMap
+
         // 初始化角色权限（创建新对象确保响应式）
         const initialPerms = {}
         response.data.roles.forEach(role => {
@@ -162,6 +155,11 @@ export function usePermissions() {
         }
       }
     } catch (err) {
+      // 忽略请求被取消的错误（去重机制导致）
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        console.log('请求被取消（去重）:', err.message)
+        return
+      }
       ElMessage.error('加载权限数据失败')
     } finally {
       loading.value = false
@@ -230,7 +228,6 @@ export function usePermissions() {
     groupedPermissions,
     selectedRolePermissionList,  // 当前角色权限列表（响应式）
     // 方法
-    getRoleIcon,
     getRoleDescription,
     getRolePermissionCount,
     selectRole,

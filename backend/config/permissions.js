@@ -56,6 +56,10 @@ const PERMISSIONS = {
   'system:permission:view': { label: '查看权限', module: 'system', description: '查看权限配置' },
   'system:permission:manage': { label: '管理权限', module: 'system', description: '修改权限配置' },
 
+  // 系统管理模块 - 角色
+  'system:role:view': { label: '查看角色', module: 'system', description: '查看角色列表' },
+  'system:role:manage': { label: '管理角色', module: 'system', description: '增删改角色' },
+
   // 补充缺失的权限定义
   'system:admin': {
     label: '系统管理员',

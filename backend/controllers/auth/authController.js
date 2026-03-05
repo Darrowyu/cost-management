@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 const { success, error } = require('../../utils/response');
+const dbManager = require('../../db/database');
 
 // 导入子模块功能
 const userController = require('./userController');
@@ -77,9 +78,12 @@ const register = async (req, res, next) => {
       return res.status(400).json(error('用户名、密码和角色不能为空', 400));
     }
 
-    // 验证角色是否合法
-    const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
-    if (!validRoles.includes(role)) {
+    // 验证角色是否合法（从数据库查询）
+    const roleResult = await dbManager.query(
+      'SELECT code FROM roles WHERE code = $1 AND is_active = true',
+      [role]
+    );
+    if (roleResult.rows.length === 0) {
       return res.status(400).json(error('无效的角色类型', 400));
     }
 

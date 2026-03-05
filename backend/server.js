@@ -11,6 +11,7 @@ const dbManager = require('./db/database');
 const errorHandler = require('./middleware/errorHandler');
 const operationLogger = require('./middleware/operationLogger');
 const logger = require('./utils/logger');
+const { initRoleCache } = require('./config/rolePermissions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -128,6 +129,7 @@ app.use('/api/review', require('./routes/reviewRoutes'));
 app.use('/api/bom', require('./routes/bomRoutes'));
 app.use('/api/customers', require('./routes/customerRoutes'));
 app.use('/api/permissions', require('./routes/permissionRoutes'));
+app.use('/api/roles', require('./routes/roleRoutes'));
 
 // 404 处理
 app.use((req, res) => {
@@ -153,6 +155,9 @@ async function startServer() {
     logger.info('正在连接 PostgreSQL 数据库...');
     await dbManager.initialize();
     logger.info('数据库连接成功');
+
+    // 初始化角色缓存
+    await initRoleCache();
 
     // 启动 HTTP 服务
     server = app.listen(PORT, HOST, () => {

@@ -35,7 +35,11 @@
         <div v-for="item in paginatedModels" :key="item.id" class="item-card">
           <div class="card-body">
             <div class="item-header">
-              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" preview-teleported :z-index="3000" />
+              <el-image v-if="item.primary_image" :src="item.primary_image" :preview-src-list="[item.primary_image]" fit="cover" class="card-image" preview-teleported :z-index="3000" @error="handleImageError(item, 'primary_image')">
+                <template #error>
+                  <div class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
+                </template>
+              </el-image>
               <div v-else class="card-image-placeholder"><el-icon :size="28" color="#c0c4cc"><Picture /></el-icon></div>
               <div class="item-info">
                 <div class="item-name">{{ item.model_name }}</div>
@@ -72,7 +76,11 @@
         <el-table-column type="selection" width="55" />
         <el-table-column label="产品图" width="80" align="center">
           <template #default="{ row }">
-            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" preview-teleported :z-index="3000" />
+            <el-image v-if="row.primary_image" :src="row.primary_image" :preview-src-list="[row.primary_image]" fit="cover" style="width: 50px; height: 50px; border-radius: 4px;" preview-teleported :z-index="3000" @error="handleImageError(row, 'primary_image')">
+              <template #error>
+                <el-icon :size="24" color="#c0c4cc"><Picture /></el-icon>
+              </template>
+            </el-image>
             <el-icon v-else :size="24" color="#c0c4cc"><Picture /></el-icon>
           </template>
         </el-table-column>
@@ -174,7 +182,13 @@
           <div class="upload-tip">支持 JPG/PNG/WEBP，单张最大 5MB</div>
           <div class="image-list" v-if="modelImages.length > 0">
             <div v-for="img in modelImages" :key="img.id" class="image-item">
-              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" preview-teleported :z-index="3000" />
+              <el-image :src="img.file_path" fit="cover" style="width: 100px; height: 100px;" :preview-src-list="modelImages.map(i => i.file_path)" preview-teleported :z-index="3000" @error="handleImageError(img, 'file_path')">
+                <template #error>
+                  <div style="width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; background: #f5f7fa;">
+                    <el-icon :size="32" color="#c0c4cc"><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
               <div class="image-actions">
                 <el-tag v-if="img.is_primary" type="success" size="small">主图</el-tag>
                 <el-button v-else size="small" link @click="setAsPrimary(img.id)">设为主图</el-button>
@@ -312,6 +326,11 @@ const fetchModelImages = async (modelId) => {
     const response = await request.get(`/models/${modelId}/images`)
     if (response.success) modelImages.value = response.data
   } catch (error) { logger.error('获取图片失败', error) }
+}
+
+// 处理图片加载错误 - 将图片路径置空显示占位符
+const handleImageError = (item, field) => {
+  item[field] = null
 }
 
 const beforeImageUpload = (file) => {

@@ -10,7 +10,7 @@
         @click="$emit('select-role', role)"
       >
         <div class="role-icon">
-          <i :class="getRoleIcon(role.code)"></i>
+          <i class="ri-user-line"></i>
         </div>
         <div class="role-info">
           <span class="role-name">{{ role.name }}</span>
@@ -32,10 +32,6 @@ defineProps({
   selectedRole: {
     type: Object,
     default: null
-  },
-  getRoleIcon: {
-    type: Function,
-    required: true
   },
   getRolePermissionCount: {
     type: Function,

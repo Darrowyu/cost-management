@@ -1,9 +1,12 @@
 <template>
   <div class="h-full flex flex-col bg-slate-50">
+    <!-- 全局标题 - 使用统一组件 -->
+    <CostPageHeader title="帮助中心" />
+
     <!-- 顶部搜索栏 - 固定 -->
     <header class="flex-shrink-0 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8">
       <div class="max-w-7xl mx-auto">
-        <div class="flex items-center h-16">
+        <div class="flex items-center h-14">
           <!-- 移动端菜单按钮 -->
           <button
             class="lg:hidden mr-4 p-2 rounded-lg hover:bg-slate-100"
@@ -12,14 +15,8 @@
             <i class="ri-menu-line text-xl text-slate-600"></i>
           </button>
 
-          <!-- Logo/返回 -->
-          <div class="flex items-center flex-shrink-0">
-            <i class="ri-book-open-line text-primary-600 text-xl mr-2"></i>
-            <span class="font-semibold text-slate-800">帮助中心</span>
-          </div>
-
           <!-- 面包屑 -->
-          <div class="hidden md:flex items-center ml-8 text-sm text-slate-500">
+          <div class="hidden md:flex items-center text-sm text-slate-500">
             <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
               <span v-if="index > 0" class="mx-2">/</span>
               <a
@@ -92,6 +89,7 @@ import { renderMarkdown } from '../../utils/markdownRenderer'
 import HelpSidebar from './components/HelpSidebar.vue'
 import HelpSearchBar from './components/HelpSearchBar.vue'
 import HelpContent from './components/HelpContent.vue'
+import CostPageHeader from '../../components/cost/CostPageHeader.vue'
 
 const route = useRoute()
 const router = useRouter()

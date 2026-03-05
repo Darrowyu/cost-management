@@ -13,15 +13,15 @@
         <i :class="collapsed ? 'ri-sidebar-unfold-line' : 'ri-sidebar-fold-line'" class="text-xl"></i>
       </button>
 
-      <!-- 分割线 (仅在有门户内容且非帮助页面时显示) -->
-      <div v-if="layoutStore.isHeaderPortalActive && !isHelpRoute" class="h-6 w-px bg-slate-300 mx-4"></div>
+      <!-- 分割线 (仅在有门户内容时显示) -->
+      <div v-if="layoutStore.isHeaderPortalActive" class="h-6 w-px bg-slate-300 mx-4"></div>
 
       <!-- 门户插槽（左侧标题） -->
-      <div v-if="!isHelpRoute" id="header-portal-left" class="flex items-center"></div>
+      <div id="header-portal-left" class="flex items-center"></div>
     </div>
 
-    <!-- 右侧：功能图标 (帮助页面隐藏) -->
-    <div v-if="!isHelpRoute" class="flex items-center">
+    <!-- 右侧：功能图标 -->
+    <div class="flex items-center">
       <!-- 门户插槽（右侧操作栏） -->
       <div id="header-portal-right" class="flex items-center"></div>
 

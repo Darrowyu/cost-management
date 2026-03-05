@@ -1,12 +1,11 @@
 <template>
   <div class="config-page">
-    <!-- 页面头部 -->
-    <div class="config-header">
-      <div class="config-header-left">
-        <h1 class="config-title">系统配置</h1>
+    <!-- 页面头部 - 使用统一组件 -->
+    <CostPageHeader title="系统配置">
+      <template #after-title>
         <span class="config-update-time" v-if="lastUpdateTime">更新于 {{ lastUpdateTime }}</span>
-      </div>
-    </div>
+      </template>
+    </CostPageHeader>
 
     <el-tabs v-model="activeTab" class="config-tabs">
       <!-- 业务配置 Tab -->
@@ -375,6 +374,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { onBeforeRouteLeave } from 'vue-router';
 import { Plus, Delete, Money, Switch, Ship, Box, Files, TrendCharts, FolderOpened } from '@element-plus/icons-vue';
 import { useAuthStore } from '../../store/auth';
+import CostPageHeader from '../../components/cost/CostPageHeader.vue';
 import { useConfigStore } from '../../store/config';
 import request from '../../utils/request';
 import logger from '../../utils/logger';
@@ -640,10 +640,7 @@ onBeforeUnmount(() => { window.removeEventListener('beforeunload', handleBeforeU
 <style scoped>
 .config-page { max-width: 1200px; }
 
-/* 页面头部 */
-.config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.config-header-left { display: flex; align-items: baseline; gap: 12px; }
-.config-title { font-size: 20px; font-weight: 600; color: #1e293b; margin: 0; }
+/* 更新时间 - 在标题右侧显示 */
 .config-update-time { font-size: 12px; color: #94a3b8; }
 
 /* Tabs样式 */

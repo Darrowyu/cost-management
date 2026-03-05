@@ -7,7 +7,6 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { isAdmin } = require('../middleware/roleCheck');
 const { success, error } = require('../utils/response');
-const { ROLE_NAMES } = require('../config/rolePermissions');
 const dbManager = require('../db/database');
 const logger = require('../utils/logger');
 const { getPermissions, getRolePermissionsFromDB, clearPermissionsCache } = require('../utils/permissions');
@@ -70,15 +69,25 @@ router.get('/roles', verifyToken, isAdmin, async (req, res) => {
   try {
     const { permissions, modules } = await getPermissions();
 
-    // 获取所有角色权限
-    const roleCodes = Object.keys(ROLE_NAMES);
-    const roles = [];
+    // 从数据库获取所有启用的角色
+    const rolesResult = await dbManager.query(
+      `SELECT code, name, description, icon, is_system, is_active, sort_order
+       FROM roles
+       WHERE is_active = true
+       ORDER BY sort_order ASC, id ASC`
+    );
 
-    for (const roleCode of roleCodes) {
-      const rolePerms = await getRolePermissionsFromDB(roleCode);
+    const roles = [];
+    for (const role of rolesResult.rows) {
+      const rolePerms = await getRolePermissionsFromDB(role.code);
       roles.push({
-        code: roleCode,
-        name: ROLE_NAMES[roleCode],
+        code: role.code,
+        name: role.name,
+        description: role.description,
+        icon: role.icon,
+        is_system: role.is_system,
+        is_active: role.is_active,
+        sort_order: role.sort_order,
         permissions: rolePerms
       });
     }
@@ -98,16 +107,23 @@ router.get('/roles/:role', verifyToken, isAdmin, async (req, res) => {
   try {
     const { role } = req.params;
 
-    if (!ROLE_NAMES[role]) {
+    // 从数据库验证角色存在
+    const roleResult = await dbManager.query(
+      'SELECT code, name FROM roles WHERE code = $1 AND is_active = true',
+      [role]
+    );
+
+    if (roleResult.rows.length === 0) {
       return res.status(404).json(error('角色不存在'));
     }
 
+    const roleInfo = roleResult.rows[0];
     const permissions = await getRolePermissionsFromDB(role);
 
     res.json(success({
       role: {
-        code: role,
-        name: ROLE_NAMES[role],
+        code: roleInfo.code,
+        name: roleInfo.name,
         permissions
       }
     }));
@@ -126,9 +142,17 @@ router.put('/roles/:role', verifyToken, isAdmin, async (req, res) => {
     const { role } = req.params;
     const { permissions: newPermissions } = req.body;
 
-    if (!ROLE_NAMES[role]) {
+    // 从数据库验证角色存在
+    const roleResult = await dbManager.query(
+      'SELECT code, name, is_system FROM roles WHERE code = $1 AND is_active = true',
+      [role]
+    );
+
+    if (roleResult.rows.length === 0) {
       return res.status(404).json(error('角色不存在'));
     }
+
+    const roleInfo = roleResult.rows[0];
 
     if (role === 'admin') {
       return res.status(403).json(error('不能修改管理员角色的权限'));
@@ -183,7 +207,7 @@ router.put('/roles/:role', verifyToken, isAdmin, async (req, res) => {
     res.json(success({
       role: {
         code: role,
-        name: ROLE_NAMES[role],
+        name: roleInfo.name,
         permissions: newPermissions
       }
     }, '权限更新成功'));
@@ -202,9 +226,16 @@ router.get('/my', verifyToken, async (req, res) => {
     const { role } = req.user;
     const permissions = await getRolePermissionsFromDB(role);
 
+    // 从数据库获取角色名称
+    const roleResult = await dbManager.query(
+      'SELECT name FROM roles WHERE code = $1',
+      [role]
+    );
+    const roleName = roleResult.rows[0]?.name || role;
+
     res.json(success({
       role,
-      roleName: ROLE_NAMES[role],
+      roleName,
       permissions
     }));
   } catch (err) {
