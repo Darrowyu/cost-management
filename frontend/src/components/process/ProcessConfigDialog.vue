@@ -16,14 +16,14 @@
         label-position="top" 
         class="modern-form"
       >
-        <!-- Section 1: 基础信息 (2-Column) -->
+        <!-- Section 1: 基础信息 (3-Column Compact) -->
         <div class="form-section">
-          <el-row :gutter="24">
-            <el-col :span="12">
+          <el-row :gutter="16">
+            <el-col :span="8">
               <el-form-item label="产品型号" required>
-                <el-select 
-                  v-model="form.model_id" 
-                  placeholder="选择产品型号" 
+                <el-select
+                  v-model="form.model_id"
+                  placeholder="选择产品型号"
                   :disabled="isEdit"
                   filterable
                   class="w-full"
@@ -37,13 +37,12 @@
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="12">
+            <el-col :span="8">
               <el-form-item label="配置名称" required>
                 <el-input v-model="form.config_name" placeholder="例如：C5标准包装" />
               </el-form-item>
             </el-col>
-
-            <el-col :span="12">
+            <el-col :span="8">
               <el-form-item label="生产工厂" required>
                 <el-select v-model="form.factory" placeholder="选择工厂" class="w-full">
                   <el-option label="东莞迅安" value="dongguan_xunan" />
@@ -51,7 +50,9 @@
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="12">
+          </el-row>
+          <el-row :gutter="16">
+            <el-col :span="8">
               <el-form-item label="状态">
                 <StatusSwitch
                   v-model="form.is_active"
@@ -121,22 +122,22 @@
             </el-table>
           </div>
 
-          <!-- Footer Summary -->
-          <div class="price-summary">
-             <div class="item">工序小计: ¥{{ formatNumber(formProcessSubtotal) }}</div>
-             <div class="item total">
-               含系数 ({{ configStore.getProcessCoefficient() }}):
-               <span class="price">¥{{ formatNumber(formTotalProcessPrice) }}</span>
-             </div>
-          </div>
-
-          <!-- Last Modified Info -->
-          <div v-if="isEdit && lastModifiedInfo" class="last-modified-info">
-            <el-icon class="info-icon"><Clock /></el-icon>
-            <span class="info-text">
-              最后修改：{{ lastModifiedInfo.operator_name || lastModifiedInfo.username || '未知用户' }} 于 {{ formatDateTime(lastModifiedInfo.operated_at) }}
-              <span class="info-price">上次总价：¥{{ formatNumber(lastModifiedInfo.new_process_total || 0) }}</span>
-            </span>
+          <!-- Summary & Info -->
+          <div class="summary-section">
+            <div v-if="isEdit && lastModifiedInfo" class="last-modified-info">
+              <el-icon class="info-icon"><Clock /></el-icon>
+              <span class="info-text">
+                {{ lastModifiedInfo.operator_name || lastModifiedInfo.username || '未知用户' }} · {{ formatDateTime(lastModifiedInfo.operated_at) }}
+                <span class="info-price">上次 ¥{{ formatNumber(lastModifiedInfo.new_process_total || 0) }}</span>
+              </span>
+            </div>
+            <div class="price-summary">
+              <div class="item">工序小计: ¥{{ formatNumber(formProcessSubtotal) }}</div>
+              <div class="item total">
+                含系数 ({{ configStore.getProcessCoefficient() }}):
+                <span class="price">¥{{ formatNumber(formTotalProcessPrice) }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -193,8 +194,8 @@
 
         <el-form-item label="模式">
           <el-radio-group v-model="copyMode">
-            <el-radio label="replace">覆盖 (清空当前)</el-radio>
-            <el-radio label="merge">追加 (保留当前)</el-radio>
+            <el-radio value="replace">覆盖 (清空当前)</el-radio>
+            <el-radio value="merge">追加 (保留当前)</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -445,9 +446,7 @@ const loadLastModifiedInfo = async () => {
 }
 
 .dialog-content {
-  padding: 24px;
-  max-height: 70vh;
-  overflow-y: auto;
+  padding: 20px;
 }
 
 .modern-form :deep(.el-form-item__label) {
@@ -457,7 +456,7 @@ const loadLastModifiedInfo = async () => {
 }
 
 .form-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .form-section:last-child {
   margin-bottom: 0;
@@ -467,35 +466,22 @@ const loadLastModifiedInfo = async () => {
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
-/* Highlight Section (Bordered) */
+/* Highlight Section (Compact) */
 .highlight-section {
-  border: 1px solid #e2e8f0;
+  border: none;
   border-radius: 8px;
-  padding: 24px;
-  background-color: white;
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  overflow: visible;
 }
 
-/* Process Table Styling */
+/* Process Table Styling - Single scrollbar */
 .process-table-container {
-  max-height: 480px; /* Approx height for 10 rows */
-  overflow-y: auto;
   border: 1px solid #ebeef5;
   border-bottom: none; /* Table has border */
-}
-
-/* Scrollbar Styling */
-.process-table-container::-webkit-scrollbar {
-  width: 6px;
-}
-.process-table-container::-webkit-scrollbar-track {
-  background: #f1f2f5;
-}
-.process-table-container::-webkit-scrollbar-thumb {
-  background: #cdd0d6;
-  border-radius: 3px;
 }
 
 .delete-icon-btn {
@@ -533,13 +519,20 @@ const loadLastModifiedInfo = async () => {
   min-width: 100px;
 }
 
+/* Summary Section (Merged) */
+.summary-section {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 /* Price Summary */
 .price-summary {
     display: flex;
     justify-content: flex-end;
     gap: 24px;
-    margin-top: 16px;
-    padding: 12px;
+    padding: 10px 12px;
     background: #f8fafc;
     border-radius: 6px;
 }
@@ -564,8 +557,7 @@ const loadLastModifiedInfo = async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 12px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     background: #f0f9ff;
     border-radius: 6px;
     border-left: 3px solid #3b82f6;
@@ -577,12 +569,12 @@ const loadLastModifiedInfo = async () => {
 }
 
 .last-modified-info .info-text {
-    font-size: 13px;
+    font-size: 12px;
     color: #475569;
 }
 
 .last-modified-info .info-price {
-    margin-left: 12px;
+    margin-left: 8px;
     color: #059669;
     font-weight: 500;
 }

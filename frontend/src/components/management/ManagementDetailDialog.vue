@@ -303,7 +303,7 @@ interface SummaryMethodParam {
 
 interface Props {
   modelValue: boolean
-  config: ManagementConfig
+  config: ManagementConfig | null
   type: 'packaging' | 'process'
   items: ManagementItem[]
 }
