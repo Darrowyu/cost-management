@@ -91,6 +91,10 @@ INSERT INTO permissions (code, label, module, description) VALUES
 ('system:permission:view', '查看权限', 'system', '查看权限配置'),
 ('system:permission:manage', '管理权限', 'system', '修改权限配置'),
 
+-- 系统管理模块 - 角色
+('system:role:view', '查看角色', 'system', '查看角色列表'),
+('system:role:manage', '管理角色', 'system', '增删改角色'),
+
 -- 补充缺失的权限定义
 ('system:admin', '系统管理员', 'system', '系统最高管理权限，拥有所有功能访问权'),
 ('cost:delete:all', '删除所有成本分析', 'cost', '可删除任意状态的成本分析记录'),
@@ -102,7 +106,8 @@ ON CONFLICT (code) DO NOTHING;
 
 -- 为admin角色分配新权限
 INSERT INTO role_permissions (role_code, permission_code)
-VALUES ('admin', 'system:admin'), ('admin', 'cost:delete:all')
+VALUES ('admin', 'system:admin'), ('admin', 'cost:delete:all'),
+       ('admin', 'system:role:view'), ('admin', 'system:role:manage')
 ON CONFLICT (role_code, permission_code) DO NOTHING;
 
 -- 插入默认角色权限数据

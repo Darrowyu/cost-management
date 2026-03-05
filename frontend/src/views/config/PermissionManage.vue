@@ -7,93 +7,103 @@
       </template>
     </CostPageHeader>
 
-    <!-- 安全提示 -->
-    <el-alert
-      title="安全提示"
-      description="修改权限后，已登录用户需要重新登录才能生效。管理员角色拥有所有权限，不可修改。"
-      type="warning"
-      show-icon
-      :closable="false"
-      class="security-alert"
-    />
-
-    <div class="content-wrapper">
-      <!-- 左侧：角色列表 -->
-      <RoleList
-        :roles="roles"
-        :selected-role="selectedRole"
-        :get-role-icon="getRoleIcon"
-        :get-role-permission-count="getRolePermissionCount"
-        @select-role="selectRole"
-      />
-
-      <!-- 右侧：权限配置 -->
-      <div class="permission-panel" v-if="selectedRole">
-        <div class="panel-header">
-          <div class="title-section">
-            <h3>{{ selectedRole.name }} <span class="role-tag">{{ selectedRole.code }}</span></h3>
-            <p class="role-desc">{{ getRoleDescription(selectedRole.code) }}</p>
-          </div>
-          <div class="actions" v-if="selectedRole.code !== 'admin'">
-            <el-button type="primary" :loading="saving" @click="savePermissions">
-              <i class="ri-save-line"></i> 保存
-            </el-button>
-            <el-button @click="resetPermissions">重置</el-button>
-          </div>
-        </div>
-
-        <!-- 管理员特殊提示 -->
+    <!-- Tab 切换 -->
+    <el-tabs v-model="activeTab" class="permission-tabs" type="border-card">
+      <!-- 权限配置 Tab -->
+      <el-tab-pane label="权限配置" name="permissions">
+        <!-- 安全提示 -->
         <el-alert
-          v-if="selectedRole.code === 'admin'"
-          title="管理员拥有系统所有权限"
-          description="管理员角色是系统最高权限，拥有所有功能的访问和操作权限，不可修改。"
-          type="info"
+          title="安全提示"
+          description="修改权限后，已登录用户需要重新登录才能生效。管理员角色拥有所有权限，不可修改。"
+          type="warning"
           show-icon
           :closable="false"
+          class="security-alert"
         />
 
-        <!-- 权限列表 -->
-        <div v-else class="permission-groups">
-          <!-- 全局操作栏 -->
-          <div class="global-actions">
-            <el-button-group>
-              <el-button size="small" @click="expandAll">
-                <i class="ri-arrow-down-s-line"></i> 展开全部
-              </el-button>
-              <el-button size="small" @click="collapseAll">
-                <i class="ri-arrow-up-s-line"></i> 折叠全部
-              </el-button>
-            </el-button-group>
-            <el-button size="small" type="primary" plain @click="selectAll">
-              <i class="ri-check-double-line"></i> 全选所有权限
-            </el-button>
-            <el-button size="small" @click="clearAll">
-              <i class="ri-eraser-line"></i> 清空所有
-            </el-button>
+        <div class="content-wrapper">
+          <!-- 左侧：角色列表 -->
+          <RoleList
+            :roles="roles"
+            :selected-role="selectedRole"
+            :get-role-permission-count="getRolePermissionCount"
+            @select-role="selectRole"
+          />
+
+          <!-- 右侧：权限配置 -->
+          <div class="permission-panel" v-if="selectedRole">
+            <div class="panel-header">
+              <div class="title-section">
+                <h3>{{ selectedRole.name }} <span class="role-tag">{{ selectedRole.code }}</span></h3>
+                <p class="role-desc">{{ getRoleDescription(selectedRole.code) }}</p>
+              </div>
+              <div class="actions" v-if="selectedRole.code !== 'admin'">
+                <el-button type="primary" :loading="saving" @click="savePermissions">
+                  <i class="ri-save-line"></i> 保存
+                </el-button>
+                <el-button @click="resetPermissions">重置</el-button>
+              </div>
+            </div>
+
+            <!-- 管理员特殊提示 -->
+            <el-alert
+              v-if="selectedRole.code === 'admin'"
+              title="管理员拥有系统所有权限"
+              description="管理员角色是系统最高权限，拥有所有功能的访问和操作权限，不可修改。"
+              type="info"
+              show-icon
+              :closable="false"
+            />
+
+            <!-- 权限列表 -->
+            <div v-else class="permission-groups">
+              <!-- 全局操作栏 -->
+              <div class="global-actions">
+                <el-button-group>
+                  <el-button size="small" @click="expandAll">
+                    <i class="ri-arrow-down-s-line"></i> 展开全部
+                  </el-button>
+                  <el-button size="small" @click="collapseAll">
+                    <i class="ri-arrow-up-s-line"></i> 折叠全部
+                  </el-button>
+                </el-button-group>
+                <el-button size="small" type="primary" plain @click="selectAll">
+                  <i class="ri-check-double-line"></i> 全选所有权限
+                </el-button>
+                <el-button size="small" @click="clearAll">
+                  <i class="ri-eraser-line"></i> 清空所有
+                </el-button>
+              </div>
+
+              <PermissionGroup
+                v-for="(groupPermissions, moduleKey) in groupedPermissions"
+                :key="moduleKey"
+                :ref="el => { if (el) groupRefs[moduleKey] = el }"
+                :module-key="moduleKey"
+                :group-permissions="groupPermissions"
+                :modules="modules"
+                :selected-permissions="selectedRolePermissionList"
+                :is-group-all-selected="isGroupAllSelected"
+                :is-group-indeterminate="isGroupIndeterminate"
+                @toggle-permission="togglePermission"
+                @toggle-group-all="toggleGroupAll"
+              />
+            </div>
           </div>
 
-          <PermissionGroup
-            v-for="(groupPermissions, moduleKey) in groupedPermissions"
-            :key="moduleKey"
-            :ref="el => { if (el) groupRefs[moduleKey] = el }"
-            :module-key="moduleKey"
-            :group-permissions="groupPermissions"
-            :modules="modules"
-            :selected-permissions="selectedRolePermissionList"
-            :is-group-all-selected="isGroupAllSelected"
-            :is-group-indeterminate="isGroupIndeterminate"
-            @toggle-permission="togglePermission"
-            @toggle-group-all="toggleGroupAll"
-          />
+          <!-- 未选择角色提示 -->
+          <div v-else class="empty-state">
+            <i class="ri-shield-user-line"></i>
+            <p>请在左侧选择一个角色进行权限配置</p>
+          </div>
         </div>
-      </div>
+      </el-tab-pane>
 
-      <!-- 未选择角色提示 -->
-      <div v-else class="empty-state">
-        <i class="ri-shield-user-line"></i>
-        <p>请在左侧选择一个角色进行权限配置</p>
-      </div>
-    </div>
+      <!-- 角色管理 Tab -->
+      <el-tab-pane label="角色管理" name="roles">
+        <RoleManageTab />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -103,6 +113,9 @@ import { usePermissions } from '../../composables/usePermissions'
 import RoleList from '../../components/permission/RoleList.vue'
 import PermissionGroup from '../../components/permission/PermissionGroup.vue'
 import CostPageHeader from '../../components/cost/CostPageHeader.vue'
+import RoleManageTab from '../../components/role/RoleManageTab.vue'
+
+const activeTab = ref('permissions')
 
 const {
   saving,
@@ -110,8 +123,7 @@ const {
   roles,
   selectedRole,
   groupedPermissions,
-  selectedRolePermissionList,  // 当前角色权限列表
-  getRoleIcon,
+  selectedRolePermissionList,
   getRoleDescription,
   getRolePermissionCount,
   selectRole,
@@ -124,7 +136,7 @@ const {
   resetPermissions,
 } = usePermissions()
 
-const groupRefs = ref({})  // 存储子组件引用
+const groupRefs = ref({})
 
 // 展开所有
 const expandAll = () => {
@@ -144,7 +156,7 @@ const collapseAll = () => {
 const selectAll = () => {
   Object.keys(groupedPermissions.value).forEach(moduleKey => {
     if (!isGroupAllSelected(moduleKey)) {
-      toggleGroupAll(moduleKey, true)  // 批量全选该模块
+      toggleGroupAll(moduleKey, true)
     }
   })
 }
@@ -152,7 +164,7 @@ const selectAll = () => {
 // 清空所有权限
 const clearAll = () => {
   Object.keys(groupedPermissions.value).forEach(moduleKey => {
-    toggleGroupAll(moduleKey, false)  // 批量清空该模块
+    toggleGroupAll(moduleKey, false)
   })
 }
 
@@ -165,6 +177,10 @@ onMounted(() => {
 .permission-manage {
   background-color: var(--el-bg-color-page);
   min-height: 100%;
+}
+
+.permission-tabs {
+  margin-top: 20px;
 }
 
 .security-alert {

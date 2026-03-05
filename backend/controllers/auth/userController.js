@@ -8,6 +8,7 @@ const User = require('../../models/User');
 const { success, error } = require('../../utils/response');
 const logger = require('../../utils/logger');
 const bcrypt = require('bcrypt');
+const dbManager = require('../../db/database');
 
 // 获取所有用户（管理员）
 const getAllUsers = async (req, res, next) => {
@@ -51,10 +52,15 @@ const updateUser = async (req, res, next) => {
             }
         }
 
-        // 验证角色是否合法
-        const validRoles = ['admin', 'purchaser', 'producer', 'reviewer', 'salesperson', 'readonly'];
-        if (role && !validRoles.includes(role)) {
-            return res.status(400).json(error('无效的角色类型', 400));
+        // 验证角色是否合法（从数据库查询）
+        if (role) {
+            const roleResult = await dbManager.query(
+                'SELECT code FROM roles WHERE code = $1 AND is_active = true',
+                [role]
+            );
+            if (roleResult.rows.length === 0) {
+                return res.status(400).json(error('无效的角色类型', 400));
+            }
         }
 
         await User.update(id, { username, real_name, email, role, is_active });

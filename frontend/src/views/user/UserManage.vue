@@ -173,12 +173,12 @@
 
         <el-form-item label="角色" prop="role">
           <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
-            <el-option label="管理员" value="admin" />
-            <el-option label="采购" value="purchaser" />
-            <el-option label="生产" value="producer" />
-            <el-option label="审核" value="reviewer" />
-            <el-option label="业务" value="salesperson" />
-            <el-option label="只读" value="readonly" />
+            <el-option
+              v-for="role in availableRoles"
+              :key="role.code"
+              :label="role.name"
+              :value="role.code"
+            />
           </el-select>
         </el-form-item>
 
@@ -321,32 +321,37 @@ const resetPasswordRules = {
   ]
 };
 
-// 角色颜色映射
-const ROLE_COLORS = {
-  admin: '#F56C6C',
-  purchaser: '#E6A23C',
-  producer: '#67C23A',
-  reviewer: '#409EFF',
-  salesperson: '#9B59B6',
-  readonly: '#909399'
+// 可用角色列表（从API获取）
+const availableRoles = ref([]);
+const roleColorMap = ref({});
+const roleNameMap = ref({});
+
+// 加载角色列表
+const loadRoles = async () => {
+  try {
+    const response = await request.get('/roles');
+    if (response.success) {
+      availableRoles.value = response.data.filter(r => r.is_active);
+      // 构建角色名称和颜色映射
+      const colors = ['#F56C6C', '#E6A23C', '#67C23A', '#409EFF', '#9B59B6', '#909399', '#FF6B6B', '#4ECDC4'];
+      response.data.forEach((role, index) => {
+        roleNameMap.value[role.code] = role.name;
+        roleColorMap.value[role.code] = colors[index % colors.length];
+      });
+    }
+  } catch (error) {
+    console.error('加载角色列表失败:', error);
+  }
 };
 
 // 获取角色名称
 const getRoleName = (role) => {
-  const roleMap = {
-    admin: '管理员',
-    purchaser: '采购',
-    producer: '生产',
-    reviewer: '审核',
-    salesperson: '业务',
-    readonly: '只读'
-  };
-  return roleMap[role] || role;
+  return roleNameMap.value[role] || role;
 };
 
 // 获取角色颜色
 const getRoleColor = (role) => {
-  return ROLE_COLORS[role] || '#909399';
+  return roleColorMap.value[role] || '#909399';
 };
 
 // 获取姓名首字母（支持中英文）
@@ -564,6 +569,7 @@ const handleDownloadTemplate = async () => {
 
 onMounted(() => {
   loadUsers();
+  loadRoles();
 });
 </script>
 
