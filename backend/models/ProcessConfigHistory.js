@@ -20,12 +20,12 @@ class ProcessConfigHistory {
    * 创建历史记录
    * @param {Object} data - 历史记录数据
    * @param {number} data.packaging_config_id - 包装配置ID
-   * @param {number} data.process_id - 工序ID
-   * @param {string} data.action - 操作类型 (INSERT/UPDATE/DELETE)
-   * @param {Object} data.old_data - 变更前数据
-   * @param {Object} data.new_data - 变更后数据
-   * @param {number} data.old_process_total - 变更前工序总价
-   * @param {number} data.new_process_total - 变更后工序总价
+   * @param {number} [data.process_id] - 工序ID（可选）
+   * @param {string} data.action - 操作类型 ('create'|'update'|'delete'|'batch_update'|'activate'|'deactivate')
+   * @param {Object} [data.old_data] - 变更前数据，格式 { config: {...}, processes: [...] }
+   * @param {Object} [data.new_data] - 变更后数据，格式 { config: {...}, processes: [...] }
+   * @param {number} [data.old_process_total] - 变更前工序总价
+   * @param {number} [data.new_process_total] - 变更后工序总价
    * @param {number} data.operated_by - 操作人ID
    * @returns {Promise<number>} 新历史记录的ID
    */
