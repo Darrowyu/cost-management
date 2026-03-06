@@ -51,19 +51,6 @@
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <el-form-item label="状态">
-                <StatusSwitch
-                  v-model="formData.is_active"
-                  :active-value="1"
-                  :inactive-value="0"
-                  active-text="启用"
-                  inactive-text="停用"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
         </div>
 
         <!-- Section 2: Packaging Spec Configuration (Shared Component) -->
@@ -75,14 +62,21 @@
         <!-- Section 3: 工序列表 -->
         <div class="form-section">
           <div class="flex justify-between items-center mb-3">
-             <div class="section-title mb-0">工序列表</div>
+             <div class="flex items-center gap-3">
+               <div class="section-title mb-0">工序列表</div>
+               <StatusSwitch
+                 v-model="formData.is_active"
+                 :active-value="1"
+                 :inactive-value="0"
+                 active-text="启用"
+                 inactive-text="停用"
+                 class="compact-switch"
+                 inline-prompt
+               />
+             </div>
              <div class="flex gap-2">
-                <el-button type="info" plain size="small" @click="openProcessCopyDialog">
-                  从其他配置复制
-                </el-button>
-                <el-button type="primary" plain size="small" @click="addProcess">
-                  添加工序
-                </el-button>
+                <el-button type="info" plain class="mini-btn" @click="openProcessCopyDialog">复制</el-button>
+                <el-button type="primary" plain class="mini-btn" @click="addProcess">添加</el-button>
              </div>
           </div>
 
@@ -225,7 +219,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Clock, Check } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { getLatestProcessConfigHistory } from '@/api/process'
@@ -277,14 +271,18 @@ const defaultForm = {
 const form = ref({ ...defaultForm })
 // 使用计算属性包装form.value，确保始终返回一个有效对象
 const formData = computed({
-  get: () => form.value || defaultForm,
+  get: () => {
+    const f = form.value
+    return f && f.processes ? f : defaultForm
+  },
   set: (val) => { form.value = val }
 })
 const isEdit = computed(() => !!props.initialData)
 
 // Computed
 const formProcessSubtotal = computed(() => {
-  return (formData.processes || []).reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
+  const processes = form.value?.processes || []
+  return processes.reduce((total, p) => total + (parseFloat(p.unit_price) || 0), 0)
 })
 
 // 采购员不能编辑包装规格（只能编辑包材）
@@ -309,17 +307,17 @@ watch(() => props.modelValue, (val) => {
     if (props.initialData) {
       // Deep copy to break reference
       const data = JSON.parse(JSON.stringify(props.initialData))
-      Object.assign(form, data)
+      Object.assign(form.value, data)
       // Ensure numeric types
-      form.processes = (data.processes || []).map(p => ({
+      form.value.processes = (data.processes || []).map(p => ({
         ...p,
         unit_price: Number(p.unit_price) || 0
       }))
-      form.is_active = data.is_active ? 1 : 0
+      form.value.is_active = data.is_active ? 1 : 0
       // 加载最后修改信息
       loadLastModifiedInfo()
     } else {
-      Object.assign(form, defaultForm)
+      Object.assign(form.value, defaultForm)
       lastModifiedInfo.value = null
       // If parent passed a model_id context (not implemented yet in prop, but good practice)
     }
@@ -399,12 +397,12 @@ const removeProcess = async (index) => {
 }
 
 const submitForm = async () => {
-    if (!form.model_id) return ElMessage.warning('请选择型号')
-    if (!form.config_name) return ElMessage.warning('请输入配置名称')
+    if (!form.value.model_id) return ElMessage.warning('请选择型号')
+    if (!form.value.config_name) return ElMessage.warning('请输入配置名称')
 
     // Validate Packaging Spec
-    if (!form.layer1_qty) return ElMessage.warning('请填写包装规格')
-    if (currentPackagingTypeConfig.value.layers >= 2 && !form.layer2_qty) return ElMessage.warning('请填写完整包装规格')
+    if (!form.value.layer1_qty) return ElMessage.warning('请填写包装规格')
+    if (currentPackagingTypeConfig.value.layers >= 2 && !form.value.layer2_qty) return ElMessage.warning('请填写完整包装规格')
 
     apiLoading.value = true
     try {
@@ -416,19 +414,19 @@ const submitForm = async () => {
         if (hasMaterialManage && !hasProcessManage) {
             // 只有原料管理权限：只提交包材和基本信息
             payload = {
-                id: form.id,
-                materials: form.materials
+                id: form.value.id,
+                materials: form.value.materials
             }
         } else {
             // 有工序管理权限：提交完整数据
-            payload = { ...form }
+            payload = { ...form.value }
             // Clean up unneeded layers
             if (currentPackagingTypeConfig.value.layers < 3) payload.layer3_qty = null
         }
 
         let res
         if (isEdit.value) {
-            res = await request.put(`/processes/packaging-configs/${data.id}`, payload)
+            res = await request.put(`/processes/packaging-configs/${form.value.id}`, payload)
         } else {
             res = await request.post('/processes/packaging-configs', payload)
         }
@@ -502,9 +500,9 @@ const handleCopyProcesses = () => {
 
 // 加载最后修改信息
 const loadLastModifiedInfo = async () => {
-  if (!isEdit.value || !form.id) return
+  if (!isEdit.value || !form.value.id) return
   try {
-    const res = await getLatestProcessConfigHistory(form.id)
+    const res = await getLatestProcessConfigHistory(form.value.id)
     if (res.success && res.data) {
       lastModifiedInfo.value = res.data
     }
@@ -681,5 +679,26 @@ const loadLastModifiedInfo = async () => {
     margin-left: 8px;
     color: #059669;
     font-weight: 500;
+}
+
+/* Compact Switch */
+.compact-switch :deep(.el-switch__core) {
+    height: 20px;
+    width: 36px;
+    min-width: 36px;
+}
+.compact-switch :deep(.el-switch__core .el-switch__inner) {
+    font-size: 10px;
+}
+.compact-switch :deep(.el-switch__action) {
+    width: 16px;
+    height: 16px;
+}
+
+/* Mini Button */
+.mini-btn {
+    padding: 4px 8px;
+    height: 24px;
+    font-size: 12px;
 }
 </style>

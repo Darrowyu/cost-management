@@ -65,11 +65,11 @@ const onChange = (e) => {
   cursor: not-allowed;
 }
 
-/* Styles from Switch.txt - Scaled down 10% */
+/* Compact size - scaled down */
 /* The switch - the box around the slider */
 .container {
-  width: 46px; /* 51 * 0.9 = 45.9 */
-  height: 28px; /* 31 * 0.9 = 27.9 */
+  width: 36px;
+  height: 20px;
   position: relative;
 }
 
@@ -86,22 +86,21 @@ const onChange = (e) => {
   height: 100%;
   display: block;
   background-color: #e9e9eb;
-  border-radius: 14px; /* 16 * 0.9 = 14.4 */
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease-out;
 }
 
 /* The slider */
 .slider {
-  width: 24px; /* 27 * 0.9 = 24.3 */
-  height: 24px;
+  width: 16px;
+  height: 16px;
   position: absolute;
-  /* Offset reduced from 10px to 9px */
-  left: calc(50% - 12px - 9px);
-  top: calc(50% - 12px);
+  left: 2px;
+  top: calc(50% - 8px);
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.15), 0px 3px 1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease-out;
   cursor: pointer;
 }
@@ -111,7 +110,7 @@ const onChange = (e) => {
 }
 
 .checkbox:checked + .switch .slider {
-  left: calc(50% - 12px + 9px);
-  top: calc(50% - 12px);
+  left: calc(100% - 18px);
+  top: calc(50% - 8px);
 }
 </style>

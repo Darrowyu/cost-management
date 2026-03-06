@@ -34,17 +34,16 @@ console.log('- 包材总价:', testData.packagingTotal, 'CNY');
 console.log('- 运费总价:', testData.freightTotal, 'CNY');
 console.log('- 购买数量:', testData.quantity, '片\n');
 
-// 测试 1: 基础成本计算
-console.log('【测试 1】基础成本计算');
+// 测试 1: 基础成本计算（不含运费）
+console.log('【测试 1】基础成本计算（不含运费）');
 const freightCost = testData.freightTotal / testData.quantity;
 const baseCost = calculator.calculateBaseCost({
   materialTotal: testData.materialTotal,
   processTotal: testData.processTotal,
-  packagingTotal: testData.packagingTotal,
-  freightCost: freightCost
+  packagingTotal: testData.packagingTotal
 });
-console.log('运费成本（每片）:', freightCost, 'CNY');
-console.log('基础成本价:', baseCost, 'CNY');
+console.log('基础成本价（原料 + 工序×系数 + 包材）:', baseCost, 'CNY');
+console.log('注：基础成本不含运费，运费单独计算');
 console.log('✓ 通过\n');
 
 // 测试 2: 管销价计算

@@ -47,16 +47,22 @@ const calculateItemTotals = (items, materialCoefficient, modelCategory, calculat
 
     // 计算单项原料小计的辅助函数
     const calcMaterialSubtotal = (item, itemCategory) => {
-        if (item.coefficient_applied) {
-            return parseFloat(item.subtotal || 0);
-        }
+        // 始终根据当前用量和单价重新计算，不依赖前端传入的subtotal
         const rules = getRulesForItem(itemCategory);
-        return CostCalculator.calculateMaterialSubtotal(
-            parseFloat(item.usage_amount || 0),
-            parseFloat(item.unit_price || 0),
-            rules,
-            itemCategory
-        );
+        const usage = parseFloat(item.usage_amount || 0);
+        const price = parseFloat(item.unit_price || 0);
+
+        // 根据规则中的 formula 决定计算方式
+        if (rules.formula === 'multiply') {
+            // 乘法公式：(用量 × 单价) / 系数
+            const subtotal = (usage * price) / (rules.coefficient || 1);
+            return Math.round(subtotal * 10000) / 10000;
+        } else {
+            // 除法公式：(单价 / 用量) / 系数
+            if (!usage || usage === 0) return 0;
+            const subtotal = (price / usage) / (rules.coefficient || 1);
+            return Math.round(subtotal * 10000) / 10000;
+        }
     };
 
     // 原料总计：不包含管销后算的原料
@@ -74,7 +80,7 @@ const calculateItemTotals = (items, materialCoefficient, modelCategory, calculat
         .filter(item => item.category === 'process')
         .reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
 
-    // 包材使用对应规则计算
+    // 包材总计：使用 calculationRules 配置（从 getRulesForItem 获取）
     const packagingTotal = items
         .filter(item => item.category === 'packaging')
         .reduce((sum, item) => sum + calcMaterialSubtotal(item, 'packaging'), 0);
@@ -119,9 +125,64 @@ const processVatRate = (vatRate, calculatorConfig) => {
     return { valid: true, vatRateToSave: parsed };
 };
 
+/**
+ * 重新计算所有明细的小计（在保存前调用，确保数据一致性）
+ * @param {Array} items - 明细数组
+ * @param {number} materialCoefficient - 原料系数
+ * @param {string} modelCategory - 产品分类
+ * @param {string} calculationType - 计算类型
+ * @param {Object} calculationRules - 计算规则配置
+ * @returns {Array} 重新计算后的明细数组
+ */
+const recalculateItemSubtotals = (items, materialCoefficient, modelCategory, calculationType = '', calculationRules = {}) => {
+    // 获取当前型号和计算类型对应的规则
+    const getRulesForItem = (itemCategory) => {
+        if (modelCategory && calculationType && calculationRules[modelCategory]) {
+            const typeRules = calculationRules[modelCategory][calculationType];
+            if (typeRules && typeRules[itemCategory]) {
+                return typeRules[itemCategory];
+            }
+        }
+        // 默认规则
+        return { formula: 'divide', coefficient: materialCoefficient };
+    };
+
+    return items.map(item => {
+        const usage = parseFloat(item.usage_amount || 0);
+        const price = parseFloat(item.unit_price || 0);
+
+        if (item.category === 'material' || item.category === 'packaging') {
+            const rules = getRulesForItem(item.category);
+            // 根据规则中的 formula 决定计算方式
+            if (rules.formula === 'multiply') {
+                // 乘法公式：(用量 × 单价) / 系数
+                const rawSubtotal = (usage * price) / (rules.coefficient || 1);
+                item.subtotal = Math.round(rawSubtotal * 10000) / 10000;
+            } else {
+                // 除法公式：(单价 / 用量) / 系数
+                if (!usage || usage === 0) {
+                    item.subtotal = 0;
+                } else {
+                    const rawSubtotal = (price / usage) / (rules.coefficient || 1);
+                    item.subtotal = Math.round(rawSubtotal * 10000) / 10000;
+                }
+            }
+            item.coefficient_applied = true;
+        } else if (item.category === 'process') {
+            // 工序直接用量 × 单价
+            item.subtotal = usage * price;
+        }
+
+        // 确保subtotal是4位小数
+        item.subtotal = Math.round((item.subtotal || 0) * 10000) / 10000;
+        return item;
+    });
+};
+
 module.exports = {
     validateQuotationData,
     calculateItemTotals,
     getModelCostParams,
-    processVatRate
+    processVatRate,
+    recalculateItemSubtotals
 };

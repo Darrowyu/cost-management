@@ -14,7 +14,7 @@ const { success, error, paginated } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
 // 引用公共工具函数
-const { validateQuotationData, calculateItemTotals, getModelCostParams, processVatRate } = require('./utils/quotationHelper');
+const { validateQuotationData, calculateItemTotals, getModelCostParams, processVatRate, recalculateItemSubtotals } = require('./utils/quotationHelper');
 
 /**
  * 创建报价单
@@ -63,6 +63,9 @@ const createQuotation = async (req, res) => {
 
     // 计算运费成本
     const freight_per_unit = freight_total / quantity;
+
+    // 重新计算所有明细的小计，确保数据一致性
+    recalculateItemSubtotals(items, materialCoefficient, modelCategory);
 
     // 计算明细总计
     const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient, modelCategory);
@@ -217,6 +220,9 @@ const updateQuotation = async (req, res) => {
 
     // 计算运费成本
     const freight_per_unit = freight_total / quantity;
+
+    // 重新计算所有明细的小计，确保数据一致性
+    recalculateItemSubtotals(items, materialCoefficient, modelCategory);
 
     // 计算明细总计
     const { materialTotal, afterOverheadMaterialTotal, processTotal, packagingTotal } = calculateItemTotals(items, materialCoefficient, modelCategory);

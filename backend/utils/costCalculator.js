@@ -27,26 +27,22 @@ class CostCalculator {
   }
 
   /**
-   * 计算基础成本价
-   * 公式：成本价 = 原料总价 + (工价总价 × 工价系数) + 包材总价 + 运费成本（可选）
-   * 
+   * 计算基础成本价（不含运费）
+   * 公式：成本价 = 原料总价 + (工价总价 × 工价系数) + 包材总价
+   * 注意：基础成本价不包含运费，运费单独计算并在后续步骤中处理
+   *
    * @param {Object} params - 计算参数
    * @param {number} params.materialTotal - 原料总价
    * @param {number} params.processTotal - 工价总价（原始值，会乘以工价系数）
    * @param {number} params.packagingTotal - 包材总价
-   * @param {number} params.freightCost - 运费成本（运费总价 ÷ 数量）
-   * @param {boolean} params.includeFreight - 是否将运费计入基础成本价（默认true）
    * @param {number} params.afterOverheadMaterialTotal - 管销后算的原料总价（默认0）
-   * @returns {number} 基础成本价
+   * @returns {number} 基础成本价（不含运费）
    */
-  calculateBaseCost({ materialTotal, processTotal, packagingTotal, freightCost, includeFreight = true, afterOverheadMaterialTotal = 0 }) {
+  calculateBaseCost({ materialTotal, processTotal, packagingTotal, afterOverheadMaterialTotal = 0 }) {
     // 工序总计需要乘以工价系数
     const adjustedProcessTotal = processTotal * this.processCoefficient;
-    // 基础成本价不包含管销后算的原料
-    let baseCost = materialTotal + adjustedProcessTotal + packagingTotal;
-    if (includeFreight) {
-      baseCost += freightCost;
-    }
+    // 基础成本价 = 原料 + 工序×系数 + 包材（不含运费）
+    const baseCost = materialTotal + adjustedProcessTotal + packagingTotal;
     return this._round(baseCost, 4);
   }
 
@@ -167,18 +163,20 @@ class CostCalculator {
     // 计算运费成本（每片）
     const freightCost = freightTotal / safeQuantity;
 
-    // 计算基础成本价（不含管销后算的原料）
+    // 计算基础成本价（不含运费、不含管销后算的原料）
     const baseCost = this.calculateBaseCost({
       materialTotal,
       processTotal,
       packagingTotal,
-      freightCost,
-      includeFreight: includeFreightInBase,
       afterOverheadMaterialTotal
     });
 
-    // 计算管销价
-    const overheadPrice = this.calculateOverheadPrice(baseCost);
+    // 计算用于管销价计算的基础值
+    // 如果 includeFreightInBase 为 true，运费计入基础成本参与管销计算
+    const costForOverhead = includeFreightInBase ? baseCost + freightCost : baseCost;
+
+    // 计算管销价（基于 costForOverhead）
+    const overheadPrice = this.calculateOverheadPrice(costForOverhead);
 
     // 计算自定义费用总结金额（基于管销价累乘）
     const customFeeSummary = this.calculateCustomFeesSummary(overheadPrice, customFees);
