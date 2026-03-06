@@ -420,12 +420,22 @@ export function usePackagingManage() {
   };
 
   // 删除包材
-  const removeMaterial = (index) => {
-    form.materials.splice(index, 1);
-    // 重新排序
-    form.materials.forEach((m, i) => {
-      m.sort_order = i;
-    });
+  const removeMaterial = async (index) => {
+    try {
+      await ElMessageBox.confirm('确定要删除该包材吗？', '删除确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      });
+      form.materials.splice(index, 1);
+      // 重新排序
+      form.materials.forEach((m, i) => {
+        m.sort_order = i;
+      });
+      ElMessage.success('删除成功');
+    } catch {
+      // 用户取消删除
+    }
   };
 
   // 提交表单

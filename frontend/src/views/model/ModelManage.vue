@@ -205,7 +205,7 @@
     </el-dialog>
 
     <!-- BOM配置弹窗 -->
-    <BomConfigDialog v-model="bomDialogVisible" :model-id="currentBomModelId" :model-name="currentBomModelName" :regulation-name="currentBomRegulationName" />
+    <BomConfigDialog v-model="bomDialogVisible" :model-id="currentBomModelId" :model-name="currentBomModelName" :regulation-name="currentBomRegulationName" @updated="fetchModels" />
   </div>
 </template>
 

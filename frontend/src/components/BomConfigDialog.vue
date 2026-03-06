@@ -337,10 +337,16 @@ const handleUpdateUsage = async (row) => {
 // 删除BOM原料
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定删除原料"${row.material_name}"吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm('确定要删除该原料吗？', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     const res = await request.delete(`/bom/${row.id}`)
     if (res.success) { bomList.value = res.data || []; ElMessage.success('删除成功'); emit('updated') }
-  } catch (e) { if (e !== 'cancel') { /* 错误已在拦截器处理 */ } }
+  } catch {
+    // 用户取消删除
+  }
 }
 
 // 导入BOM Excel
