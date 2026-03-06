@@ -168,7 +168,39 @@ const reviewStore = useReviewStore()
 const { menu, fetchMenu, findMenuItem } = useMenu()
 
 // 展开的菜单
-const expandedMenus = ref(['cost'])
+const expandedMenus = ref([])
+
+// 根据当前路由自动展开对应的父菜单
+const expandMenuByRoute = () => {
+  const currentPath = route.path
+  
+  for (const item of visibleMenuItems.value) {
+    if (item.children && item.children.length > 0) {
+      // 检查当前路由是否匹配该父菜单下的任意子菜单
+      const hasActiveChild = item.children.some(sub => {
+        if (sub.route) {
+          const [subPath] = sub.route.split('?')
+          if (currentPath === subPath) return true
+          // 处理子路由匹配（如 /cost/add 匹配 /cost）
+          if (subPath && currentPath.startsWith(subPath + '/')) return true
+        }
+        return false
+      })
+      
+      // 检查父菜单本身是否激活
+      const isParentActive = item.route && (
+        currentPath === item.route || 
+        currentPath.startsWith(item.route + '/')
+      )
+      
+      if (hasActiveChild || isParentActive) {
+        if (!expandedMenus.value.includes(item.id)) {
+          expandedMenus.value.push(item.id)
+        }
+      }
+    }
+  }
+}
 
 // 待审核数量
 const pendingCount = computed(() => reviewStore.pendingPagination.total)
@@ -183,23 +215,30 @@ const loadPendingCount = async () => {
 
 // 组件挂载时加载菜单和待审核数量
 onMounted(() => {
-  fetchMenu()
+  fetchMenu().then(() => {
+    // 菜单加载完成后，根据当前路由展开对应菜单
+    expandMenuByRoute()
+  })
   loadPendingCount()
 })
 
 // 监听用户变化（重新登录后），刷新菜单和权限
 watch(() => authStore.user?.id, (newUserId, oldUserId) => {
   if (newUserId && newUserId !== oldUserId) {
-    fetchMenu()
+    fetchMenu().then(() => {
+      expandMenuByRoute()
+    })
     loadPendingCount()
   }
 })
 
-// 监听路由变化，刷新待审核数量
+// 监听路由变化，刷新待审核数量和菜单展开状态
 watch(() => route.path, () => {
   if (route.path.includes('/review')) {
     loadPendingCount()
   }
+  // 路由变化时展开对应的父菜单
+  expandMenuByRoute()
 })
 
 // 用户信息

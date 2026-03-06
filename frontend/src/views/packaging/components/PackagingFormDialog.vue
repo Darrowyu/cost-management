@@ -138,6 +138,7 @@
             </template>
             <template #default="{ row }">
               <el-input-number
+                v-if="row.material_name && row.material_name.includes('外箱')"
                 v-model="row.carton_volume"
                 :min="0"
                 :precision="2"
@@ -147,6 +148,7 @@
                 class="w-full"
                 placeholder="必填"
               />
+              <span v-else class="text-slate-400 text-xs">-</span>
             </template>
           </el-table-column>
 

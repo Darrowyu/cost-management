@@ -120,7 +120,7 @@ export function usePackagingManage() {
         sums[index] = '合计';
         return;
       }
-      if (index === 4) { // 小计列
+      if (index === 3) { // 小计列
         const values = data.map(item => {
           const usage = item.basic_usage || 0;
           const price = item.unit_price || 0;
@@ -192,7 +192,7 @@ export function usePackagingManage() {
   // 选择原料后自动填充单价
   const handleSelectMaterial = (row, material) => {
     row.material_name = material.name;
-    row.unit_price = material.price;
+    row.unit_price = material.price !== null && material.price !== undefined ? Number(material.price) : null;
   };
 
   // 加载包装配置（包含禁用记录，前端根据视图模式过滤）
@@ -284,9 +284,9 @@ export function usePackagingManage() {
         // 替换模式：清空现有包材
         form.materials = copySourcePreview.value.map((m, index) => ({
           material_name: m.material_name,
-          basic_usage: m.basic_usage,
-          unit_price: m.unit_price,
-          carton_volume: m.carton_volume,
+          basic_usage: m.basic_usage !== null && m.basic_usage !== undefined ? Number(m.basic_usage) : null,
+          unit_price: m.unit_price !== null && m.unit_price !== undefined ? Number(m.unit_price) : null,
+          carton_volume: m.carton_volume !== null && m.carton_volume !== undefined ? Number(m.carton_volume) : null,
           sort_order: index
         }));
       } else {
@@ -296,9 +296,9 @@ export function usePackagingManage() {
           .filter(m => !existingNames.includes(m.material_name))
           .map((m, index) => ({
             material_name: m.material_name,
-            basic_usage: m.basic_usage,
-            unit_price: m.unit_price,
-            carton_volume: m.carton_volume,
+            basic_usage: m.basic_usage !== null && m.basic_usage !== undefined ? Number(m.basic_usage) : null,
+            unit_price: m.unit_price !== null && m.unit_price !== undefined ? Number(m.unit_price) : null,
+            carton_volume: m.carton_volume !== null && m.carton_volume !== undefined ? Number(m.carton_volume) : null,
             sort_order: form.materials.length + index
           }));
         form.materials.push(...newMaterials);
@@ -338,7 +338,12 @@ export function usePackagingManage() {
         form.bags_per_box = data.bags_per_box;
         form.boxes_per_carton = data.boxes_per_carton;
         form.is_active = data.is_active ? 1 : 0;
-        form.materials = data.materials || [];
+        form.materials = (data.materials || []).map(m => ({
+          ...m,
+          unit_price: m.unit_price !== null && m.unit_price !== undefined ? Number(m.unit_price) : null,
+          basic_usage: m.basic_usage !== null && m.basic_usage !== undefined ? Number(m.basic_usage) : null,
+          carton_volume: m.carton_volume !== null && m.carton_volume !== undefined ? Number(m.carton_volume) : null
+        }));
 
         dialogVisible.value = true;
       }

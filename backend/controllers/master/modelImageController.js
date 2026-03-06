@@ -16,6 +16,22 @@ const ensureDir = async (dir) => {
   }
 };
 
+/** 安全移动文件（支持跨磁盘） */
+const safeMoveFile = async (source, target) => {
+  try {
+    // 尝试直接重命名（同磁盘下更快）
+    await fs.rename(source, target);
+  } catch (err) {
+    if (err.code === 'EXDEV') {
+      // 跨磁盘移动：先复制再删除
+      await fs.copyFile(source, target);
+      await fs.unlink(source);
+    } else {
+      throw err;
+    }
+  }
+};
+
 /** 上传图片 */
 exports.uploadImages = async (req, res) => {
   try {
@@ -44,7 +60,7 @@ exports.uploadImages = async (req, res) => {
       const filePath = `/uploads/models/${id}/${fileName}`;
       const fullPath = path.join(modelDir, fileName);
 
-      await fs.rename(file.path, fullPath);
+      await safeMoveFile(file.path, fullPath);
 
       const image = await ModelImage.create({
         model_id: parseInt(id),

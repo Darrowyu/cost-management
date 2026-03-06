@@ -224,9 +224,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Delete, Clock } from '@element-plus/icons-vue'
+import { Delete, Clock, Check } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { getLatestProcessConfigHistory } from '@/api/process'
 import { useConfigStore } from '@/store/config'
